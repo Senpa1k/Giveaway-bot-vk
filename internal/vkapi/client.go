@@ -24,9 +24,9 @@ const (
 	// errCodeCantSend is VK error 901: the bot cannot message the user.
 	errCodeCantSend = 901
 
-	maxAttempts       = 3
-	rateLimitRetry    = 400 * time.Millisecond
-	maxResponseBytes  = 1 << 20
+	maxAttempts        = 3
+	rateLimitRetry     = 400 * time.Millisecond
+	maxResponseBytes   = 1 << 20
 	defaultHTTPTimeout = 30 * time.Second
 )
 
@@ -52,12 +52,12 @@ var randomCounter atomic.Int64
 
 // Client calls the VK API and paces outgoing messages.
 type Client struct {
-	token       string
-	apiVersion  string
-	http        *http.Client
-	sendMu      sync.Mutex
-	nextSendAt  time.Time
-	sendGap     time.Duration
+	token      string
+	apiVersion string
+	http       *http.Client
+	sendMu     sync.Mutex
+	nextSendAt time.Time
+	sendGap    time.Duration
 }
 
 // New creates a VK API client. sendInterval paces messages.send calls to stay

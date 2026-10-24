@@ -63,7 +63,7 @@ func (r *WinnerRepository) ActiveClaim(ctx context.Context, userID uuid.UUID) (*
 }
 
 // ByID returns the winner or model.ErrWinnerNotFound.
-func (r *WinnerRepository) ByID(ctx context.Context, id uuid.UUID) (*model.Winner, error) {
+func (r *WinnerRepository) WinnerByID(ctx context.Context, id uuid.UUID) (*model.Winner, error) {
 	query := `SELECT ` + winnerColumns + ` FROM winners WHERE id = $1 LIMIT 1`
 	return scanWinner(r.pool.QueryRow(ctx, query, id))
 }
@@ -92,7 +92,7 @@ func (r *WinnerRepository) ConfirmContact(ctx context.Context, id uuid.UUID, nam
 }
 
 // MarkNotified timestamps the notified winners.
-func (r *WinnerRepository) MarkNotified(ctx context.Context, ids []uuid.UUID) error {
+func (r *WinnerRepository) MarkWinnersNotified(ctx context.Context, ids []uuid.UUID) error {
 	if len(ids) == 0 {
 		return nil
 	}

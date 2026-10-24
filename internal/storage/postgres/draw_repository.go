@@ -57,7 +57,7 @@ func (r *DrawRepository) GetOrCreateFinal(ctx context.Context, day time.Time, wi
 }
 
 // ByID returns the draw or model.ErrDrawNotFound.
-func (r *DrawRepository) ByID(ctx context.Context, id uuid.UUID) (*model.Draw, error) {
+func (r *DrawRepository) DrawByID(ctx context.Context, id uuid.UUID) (*model.Draw, error) {
 	query := `SELECT ` + drawColumns + ` FROM draws WHERE id = $1 LIMIT 1`
 	return scanDraw(r.pool.QueryRow(ctx, query, id))
 }
@@ -69,7 +69,7 @@ func (r *DrawRepository) ByDate(ctx context.Context, kind model.DrawKind, day ti
 }
 
 // List returns all draws newest first.
-func (r *DrawRepository) List(ctx context.Context) ([]model.Draw, error) {
+func (r *DrawRepository) ListDraws(ctx context.Context) ([]model.Draw, error) {
 	rows, err := r.pool.Query(ctx, `SELECT `+drawColumns+` FROM draws ORDER BY draw_date DESC, kind`)
 	if err != nil {
 		return nil, fmt.Errorf("select draws: %w", err)
@@ -137,7 +137,7 @@ func (r *DrawRepository) SaveDrawn(ctx context.Context, draw *model.Draw, winner
 // Approve confirms the drawn results on behalf of an administrator.
 // It returns model.ErrInvalidDrawStatus when the draw is not in drawn state.
 func (r *DrawRepository) Approve(ctx context.Context, id uuid.UUID, approvedBy string) (*model.Draw, error) {
-	draw, err := r.ByID(ctx, id)
+	draw, err := r.DrawByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +160,7 @@ func (r *DrawRepository) Approve(ctx context.Context, id uuid.UUID, approvedBy s
 }
 
 // MarkNotified completes the draw lifecycle after winner notifications.
-func (r *DrawRepository) MarkNotified(ctx context.Context, id uuid.UUID) error {
+func (r *DrawRepository) MarkDrawNotified(ctx context.Context, id uuid.UUID) error {
 	tag, err := r.pool.Exec(ctx, `
 		UPDATE draws SET status = 'notified', notified_at = now()
 		WHERE id = $1 AND status = 'approved'`,

@@ -26,10 +26,10 @@ type DrawStats struct {
 // Stats aggregates the analytics of the technical spec: user growth,
 // promocode demand and supply, draw participation.
 type Stats struct {
-	TotalUsers         int64              `json:"total_users"`
-	NewUsersByDay      []DayCount         `json:"new_users_by_day"`
-	PromoRequestsTotal int64              `json:"promo_requests_total"`
-	PromoIssuedTotal   int64              `json:"promo_issued_total"`
+	TotalUsers         int64               `json:"total_users"`
+	NewUsersByDay      []DayCount          `json:"new_users_by_day"`
+	PromoRequestsTotal int64               `json:"promo_requests_total"`
+	PromoIssuedTotal   int64               `json:"promo_issued_total"`
 	PromoByPartner     []PartnerPromoStats `json:"promo_by_partner"`
-	Draws              []DrawStats        `json:"draws"`
+	Draws              []DrawStats         `json:"draws"`
 }

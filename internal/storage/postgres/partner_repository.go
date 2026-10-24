@@ -69,8 +69,8 @@ func (r *PartnerRepository) ByDay(ctx context.Context, day time.Time) (*model.Pa
 	return scanPartner(r.pool.QueryRow(ctx, query, args...))
 }
 
-// ByID returns the partner or model.ErrPartnerNotFound.
-func (r *PartnerRepository) ByID(ctx context.Context, id uuid.UUID) (*model.Partner, error) {
+// PartnerByID returns the partner or model.ErrPartnerNotFound.
+func (r *PartnerRepository) PartnerByID(ctx context.Context, id uuid.UUID) (*model.Partner, error) {
 	query, args, err := statementBuilder().
 		Select(partnerColumns).
 		From("partners").
@@ -84,7 +84,7 @@ func (r *PartnerRepository) ByID(ctx context.Context, id uuid.UUID) (*model.Part
 }
 
 // List returns all partners ordered by their day.
-func (r *PartnerRepository) List(ctx context.Context) ([]model.Partner, error) {
+func (r *PartnerRepository) ListPartners(ctx context.Context) ([]model.Partner, error) {
 	query, args, err := statementBuilder().
 		Select(partnerColumns).
 		From("partners").

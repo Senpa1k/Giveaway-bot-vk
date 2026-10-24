@@ -32,17 +32,17 @@ type BotClaims interface {
 // BotService routes incoming messages to the user flows of the technical
 // spec: menu, promocodes, daily draw, chances, rules and prize claims.
 type BotService struct {
-	users        BotRepository
-	sender       Sender
-	promo        *PromoService
-	join         *JoinService
-	chances      *ChancesService
-	claims       BotClaims
-	banner       string
-	maxChances   int
-	today        func() time.Time
-	events       chan vkapi.IncomingMessage
-	log          *slog.Logger
+	users      BotRepository
+	sender     Sender
+	promo      *PromoService
+	join       *JoinService
+	chances    *ChancesService
+	claims     BotClaims
+	banner     string
+	maxChances int
+	today      func() time.Time
+	events     chan vkapi.IncomingMessage
+	log        *slog.Logger
 }
 
 // NewBotService constructs the bot router. The today function returns the

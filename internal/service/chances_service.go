@@ -17,8 +17,8 @@ type ChancesRepository interface {
 
 // CampaignView describes the campaign for the «Мои шансы» screen.
 type CampaignView struct {
-	MainPrize    string
-	MaxChances   int
+	MainPrize     string
+	MaxChances    int
 	RemainingDays func(today time.Time) int
 }
 

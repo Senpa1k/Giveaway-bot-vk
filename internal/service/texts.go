@@ -26,9 +26,9 @@ const (
 // commandAliases maps button labels and common texts to commands, so the bot
 // answers typed text the same way as button presses.
 var commandAliases = map[string]string{
-	"начать":                    CmdStart,
-	"start":                     CmdStart,
-	"получить промокод":         CmdPromo,
+	"начать":            CmdStart,
+	"start":             CmdStart,
+	"получить промокод": CmdPromo,
 	"участвовать в розыгрыше":   CmdJoin,
 	"подписаться":               CmdJoin,
 	"проверить подписку":        CmdCheck,
@@ -167,12 +167,12 @@ func alreadyJoinedReply() *Reply {
 
 // chancesView is the data of the «Мои шансы» screen.
 type chancesView struct {
-	Count       int
-	MaxChances  int
-	Days        int
-	Partners    []string
-	Remaining   int
-	MainPrize   string
+	Count      int
+	MaxChances int
+	Days       int
+	Partners   []string
+	Remaining  int
+	MainPrize  string
 }
 
 func chancesReply(view chancesView) *Reply {
