@@ -23,10 +23,10 @@ const maxContactNameLen = 100
 type WinnerRepository interface {
 	ListByDraw(ctx context.Context, drawID uuid.UUID) ([]model.Winner, error)
 	ActiveClaim(ctx context.Context, userID uuid.UUID) (*model.Winner, error)
-	ByID(ctx context.Context, id uuid.UUID) (*model.Winner, error)
+	WinnerByID(ctx context.Context, id uuid.UUID) (*model.Winner, error)
 	MarkContacted(ctx context.Context, id uuid.UUID) error
 	ConfirmContact(ctx context.Context, id uuid.UUID, name string) error
-	MarkNotified(ctx context.Context, ids []uuid.UUID) error
+	MarkWinnersNotified(ctx context.Context, ids []uuid.UUID) error
 	MarkMissed(ctx context.Context, id uuid.UUID) error
 	FirstReserve(ctx context.Context, drawID uuid.UUID) (*model.Winner, error)
 	PromoteReserve(ctx context.Context, id uuid.UUID) error
@@ -40,14 +40,14 @@ type WinnerUsers interface {
 
 // WinnerDraws completes the draw lifecycle around notifications.
 type WinnerDraws interface {
-	ByID(ctx context.Context, id uuid.UUID) (*model.Draw, error)
+	DrawByID(ctx context.Context, id uuid.UUID) (*model.Draw, error)
 	Approve(ctx context.Context, id uuid.UUID, approvedBy string) (*model.Draw, error)
-	MarkNotified(ctx context.Context, id uuid.UUID) error
+	MarkDrawNotified(ctx context.Context, id uuid.UUID) error
 }
 
 // WinnerPartners loads draw partners for winner messages.
 type WinnerPartners interface {
-	ByID(ctx context.Context, id uuid.UUID) (*model.Partner, error)
+	PartnerByID(ctx context.Context, id uuid.UUID) (*model.Partner, error)
 }
 
 // WinnerService notifies winners, collects their contact data and moves
@@ -90,7 +90,7 @@ func (s *WinnerService) NotifyDraw(ctx context.Context, drawID uuid.UUID) error 
 	queryCtx, cancel := context.WithTimeout(ctx, s.queryTimeout)
 	defer cancel()
 
-	draw, err := s.draws.ByID(queryCtx, drawID)
+	draw, err := s.draws.DrawByID(queryCtx, drawID)
 	if err != nil {
 		return fmt.Errorf("find draw: %w", err)
 	}
@@ -142,10 +142,10 @@ func (s *WinnerService) NotifyDraw(ctx context.Context, drawID uuid.UUID) error 
 		notified = append(notified, winner.ID)
 	}
 
-	if err = s.repo.MarkNotified(queryCtx, notified); err != nil {
+	if err = s.repo.MarkWinnersNotified(queryCtx, notified); err != nil {
 		return fmt.Errorf("mark winners notified: %w", err)
 	}
-	if err = s.draws.MarkNotified(queryCtx, drawID); err != nil {
+	if err = s.draws.MarkDrawNotified(queryCtx, drawID); err != nil {
 		return fmt.Errorf("mark draw notified: %w", err)
 	}
 	return nil
@@ -222,7 +222,7 @@ func (s *WinnerService) Miss(ctx context.Context, winnerID uuid.UUID) (*model.Wi
 	queryCtx, cancel := context.WithTimeout(ctx, s.queryTimeout)
 	defer cancel()
 
-	missed, err := s.repo.ByID(queryCtx, winnerID)
+	missed, err := s.repo.WinnerByID(queryCtx, winnerID)
 	if err != nil {
 		return nil, fmt.Errorf("find winner: %w", err)
 	}
@@ -252,7 +252,7 @@ func (s *WinnerService) notifyPromoted(ctx context.Context, missed, reserve mode
 	queryCtx, cancel := context.WithTimeout(ctx, s.queryTimeout)
 	defer cancel()
 
-	draw, err := s.draws.ByID(queryCtx, missed.DrawID)
+	draw, err := s.draws.DrawByID(queryCtx, missed.DrawID)
 	if err != nil {
 		s.log.Error("load draw for promoted winner", logger.Err(err))
 		return
@@ -275,7 +275,7 @@ func (s *WinnerService) notifyPromoted(ctx context.Context, missed, reserve mode
 	if err = s.sender.MessagesSend(ctx, user.VKID, reply.Text, reply.Keyboard, ""); err != nil {
 		s.log.Error("notify promoted winner failed", logger.Err(err), slog.Int64("vk_id", user.VKID))
 	}
-	if err = s.repo.MarkNotified(queryCtx, []uuid.UUID{reserve.ID}); err != nil {
+	if err = s.repo.MarkWinnersNotified(queryCtx, []uuid.UUID{reserve.ID}); err != nil {
 		s.log.Error("mark promoted winner notified", logger.Err(err))
 	}
 }
@@ -300,7 +300,7 @@ func (s *WinnerService) winnerReply(ctx context.Context, draw *model.Draw, winne
 	if draw.PartnerID == nil {
 		return nil, fmt.Errorf("daily draw %s has no partner", draw.ID)
 	}
-	partner, err := s.partners.ByID(ctx, *draw.PartnerID)
+	partner, err := s.partners.PartnerByID(ctx, *draw.PartnerID)
 	if err != nil {
 		return nil, fmt.Errorf("find draw partner: %w", err)
 	}

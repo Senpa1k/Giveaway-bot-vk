@@ -90,7 +90,7 @@ type Winner struct {
 
 // DrawResult is the outcome of a raffle for reports and admin review.
 type DrawResult struct {
-	Draw         Draw       `json:"draw"`
-	Participants int        `json:"participants"`
-	Winners      []Winner   `json:"winners"`
+	Draw         Draw     `json:"draw"`
+	Participants int      `json:"participants"`
+	Winners      []Winner `json:"winners"`
 }

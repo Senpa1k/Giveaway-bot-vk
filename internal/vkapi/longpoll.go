@@ -119,7 +119,7 @@ func (lp *LongPoll) fetch(ctx context.Context, server, key, ts string) (longPoll
 }
 
 type longPollResponse struct {
-	TS       string  `json:"ts"`
-	Failed   int     `json:"failed"`
-	Updates  []Event `json:"updates"`
+	TS      string  `json:"ts"`
+	Failed  int     `json:"failed"`
+	Updates []Event `json:"updates"`
 }
