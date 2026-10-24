@@ -11,8 +11,8 @@ type Partner struct {
 	ID               uuid.UUID
 	Name             string
 	Day              time.Time
-	VKGroupID        int64
-	VKURL            string
+	MaxChannelID     int64
+	MaxURL           string
 	PromoValidUntil  *time.Time
 	PromoWhere       string
 	PrizeName        string

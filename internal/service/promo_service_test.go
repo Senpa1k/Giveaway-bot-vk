@@ -27,13 +27,13 @@ func newPromoTestEnv(maxChances int) *promoTestEnv {
 		ID:        uuid.New(),
 		Name:      "Партнер",
 		Day:       today,
-		VKURL:     "https://vk.com/partner",
+		MaxURL:    "https://max.ru/partner",
 		PrizeName: "приз дня",
 	}
 	env := &promoTestEnv{
 		repo:    &fakePromoRepo{assigned: make(map[uuid.UUID]*model.Promocode)},
 		partner: &fakePartnerRepo{partner: partner},
-		user:    &model.User{ID: uuid.New(), VKID: 1},
+		user:    &model.User{ID: uuid.New(), MaxID: 1},
 		today:   today,
 	}
 	env.chances = NewChancesService(newFakeChancesRepo(), CampaignView{

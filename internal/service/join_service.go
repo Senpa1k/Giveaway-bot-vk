@@ -84,9 +84,9 @@ func (s *JoinService) Check(ctx context.Context, user *model.User, today time.Ti
 		return alreadyJoinedReply(), nil
 	}
 
-	member, err := s.subscriptions.IsMember(ctx, partner.VKGroupID, user.VKID)
+	member, err := s.subscriptions.IsMember(ctx, partner.MaxChannelID, user.MaxID)
 	if err != nil {
-		// A VK failure is not the user's fault: ask to retry shortly.
+		// A subscription-check failure is not the user's fault: ask to retry shortly.
 		return subscriptionFailedReply(), nil
 	}
 	if !member {

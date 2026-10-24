@@ -1,4 +1,4 @@
-// Package handlers implements the VK callback endpoint and the admin API.
+// Package handlers implements the MAX webhook endpoint and the admin API.
 package handlers
 
 import (
@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Senpa1k/Giveaway-bot-vk/internal/maxapi"
 	"github.com/Senpa1k/Giveaway-bot-vk/internal/model"
-	"github.com/Senpa1k/Giveaway-bot-vk/internal/vkapi"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -21,7 +21,13 @@ type Health interface {
 
 // BotQueue takes incoming bot messages for processing.
 type BotQueue interface {
-	Enqueue(msg vkapi.IncomingMessage) bool
+	Enqueue(msg maxapi.IncomingMessage) bool
+}
+
+// CallbackAnswerer acknowledges MAX button presses, stopping the loading
+// spinner in the user's client.
+type CallbackAnswerer interface {
+	AnswerCallback(ctx context.Context, callbackID string) error
 }
 
 // PartnerAdmin manages the action partners.
@@ -93,27 +99,25 @@ type Services interface {
 	Broadcaster
 }
 
-// Server implements the VK callback endpoint and the admin API.
+// Server implements the MAX webhook endpoint and the admin API.
 type Server struct {
-	log          *slog.Logger
-	services     Services
-	confirmation string
-	secret       string
-	adminToken   string
-	today        func() time.Time
+	log        *slog.Logger
+	services   Services
+	answerer   CallbackAnswerer
+	adminToken string
+	today      func() time.Time
 }
 
 // NewServer constructs HTTP handlers with all application services. The
-// confirmation and secret configure the VK Callback API endpoint; the token
-// guards the admin API; today resolves the current campaign day.
-func NewServer(log *slog.Logger, services Services, confirmation, secret, adminToken string, today func() time.Time) *Server {
+// answerer acknowledges webhook button presses; the token guards the admin
+// API; today resolves the current campaign day.
+func NewServer(log *slog.Logger, services Services, answerer CallbackAnswerer, adminToken string, today func() time.Time) *Server {
 	return &Server{
-		log:          log,
-		services:     services,
-		confirmation: confirmation,
-		secret:       secret,
-		adminToken:   adminToken,
-		today:        today,
+		log:        log,
+		services:   services,
+		answerer:   answerer,
+		adminToken: adminToken,
+		today:      today,
 	}
 }
 

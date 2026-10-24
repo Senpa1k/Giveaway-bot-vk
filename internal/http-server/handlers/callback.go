@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"crypto/subtle"
 	"encoding/json"
 	"io"
 	"log/slog"
@@ -9,54 +8,51 @@ import (
 
 	"github.com/Senpa1k/Giveaway-bot-vk/internal/http-server/apierr"
 	"github.com/Senpa1k/Giveaway-bot-vk/internal/lib/logger"
-	"github.com/Senpa1k/Giveaway-bot-vk/internal/vkapi"
+	"github.com/Senpa1k/Giveaway-bot-vk/internal/maxapi"
 )
 
-// maxCallbackBodyBytes bounds one Callback API event; VK events are small.
-const maxCallbackBodyBytes = 1 << 20
+// maxWebhookBodyBytes bounds one MAX webhook update; updates are small.
+const maxWebhookBodyBytes = 1 << 20
 
-// callback receives VK Callback API events (POST /callback). The response is
-// the confirmation string once and plain "ok" afterwards, as VK requires.
+// callback receives MAX webhook updates (POST /callback). The subscription is
+// registered by the administrators through POST /subscriptions of the Bot API;
+// the endpoint answers 200 to every accepted update.
 func (s *Server) callback(w http.ResponseWriter, r *http.Request) {
-	payload, err := io.ReadAll(io.LimitReader(r.Body, maxCallbackBodyBytes))
+	payload, err := io.ReadAll(io.LimitReader(r.Body, maxWebhookBodyBytes))
 	if err != nil {
-		apierr.Write(w, r, apierr.InvalidRequest("cannot read the event body"))
+		apierr.Write(w, r, apierr.InvalidRequest("cannot read the update body"))
 		return
 	}
 
-	var event vkapi.Event
-	if err := json.Unmarshal(payload, &event); err != nil {
-		apierr.Write(w, r, apierr.InvalidRequest("invalid event JSON"))
+	var update maxapi.Update
+	if err := json.Unmarshal(payload, &update); err != nil {
+		apierr.Write(w, r, apierr.InvalidRequest("invalid update JSON"))
 		return
 	}
 
-	if s.secret != "" && subtle.ConstantTimeCompare([]byte(event.Secret), []byte(s.secret)) != 1 {
-		s.log.Warn("callback secret mismatch", slog.Int64("group_id", event.GroupID))
-		apierr.Write(w, r, apierr.Unauthorized("bad callback secret"))
-		return
-	}
-
-	switch event.Type {
-	case vkapi.EventConfirmation:
-		writePlain(w, s.confirmation)
-	case vkapi.EventMessageNew:
-		message, err := event.Message()
-		if err != nil {
-			s.log.Error("decode message_new failed", logger.Err(err))
-			writePlain(w, "ok")
-			return
-		}
-		// The event is answered immediately; the queue keeps user message
-		// order while the worker does the slow part, like VK checks.
-		s.services.Enqueue(message)
-		writePlain(w, "ok")
-	default:
-		writePlain(w, "ok")
-	}
+	s.processUpdate(r, update)
+	writeOK(w)
 }
 
-// writePlain answers with a text/plain body, the format VK expects.
-func writePlain(w http.ResponseWriter, body string) {
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	_, _ = w.Write([]byte(body))
+// processUpdate decodes one platform update, acknowledges button presses and
+// queues the bot event. The update is answered immediately; the queue keeps
+// user message order while the worker does the slow part, like subscription
+// checks.
+func (s *Server) processUpdate(r *http.Request, update maxapi.Update) {
+	message, ok := maxapi.DecodeUpdate(update)
+	if !ok {
+		return
+	}
+	if message.CallbackID != "" && s.answerer != nil {
+		if err := s.answerer.AnswerCallback(r.Context(), message.CallbackID); err != nil {
+			s.log.Warn("answer callback failed", logger.Err(err), slog.Int64("max_id", message.UserID))
+		}
+	}
+	s.services.Enqueue(message)
+}
+
+// writeOK confirms the update to the platform.
+func writeOK(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write([]byte(`{"success":true}`))
 }

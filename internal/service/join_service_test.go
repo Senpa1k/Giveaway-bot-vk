@@ -2,28 +2,30 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/Senpa1k/Giveaway-bot-vk/internal/maxapi"
 	"github.com/Senpa1k/Giveaway-bot-vk/internal/model"
 )
 
 func newJoinEnv(member bool, subErr error) (*JoinService, *fakeJoinRepo, *fakeChancesRepo, *model.User, time.Time) {
 	today := time.Date(2026, 11, 1, 12, 0, 0, 0, time.UTC)
 	partner := &model.Partner{
-		ID:        newUserID(),
-		Name:      "Партнер",
-		Day:       today,
-		VKGroupID: 100,
-		VKURL:     "https://vk.com/partner",
+		ID:           newUserID(),
+		Name:         "Партнер",
+		Day:          today,
+		MaxChannelID: 100,
+		MaxURL:       "https://max.ru/partner",
 	}
 	repo := &fakeJoinRepo{}
 	chancesRepo := newFakeChancesRepo()
 	chances := NewChancesService(chancesRepo, CampaignView{MaxChances: 10, RemainingDays: func(time.Time) int { return 5 }}, time.Second)
 	join := NewJoinService(repo, &fakePartnerRepo{partner: partner}, &fakeSubscriber{member: member, err: subErr}, chances, time.Second)
-	return join, repo, chancesRepo, &model.User{ID: newUserID(), VKID: 42}, today
+	return join, repo, chancesRepo, &model.User{ID: newUserID(), MaxID: 42}, today
 }
 
 func TestJoinScreenShowsPartner(t *testing.T) {
@@ -36,8 +38,8 @@ func TestJoinScreenShowsPartner(t *testing.T) {
 	if !strings.Contains(reply.Text, "подпишись на аккаунт партнера") {
 		t.Fatalf("reply = %q, want the subscription instruction", reply.Text)
 	}
-	if len(reply.Keyboard.Buttons) != 2 {
-		t.Fatalf("keyboard rows = %d, want subscribe link and check button", len(reply.Keyboard.Buttons))
+	if rows := keyboardRows(t, reply.Keyboard); rows != 2 {
+		t.Fatalf("keyboard rows = %d, want subscribe link and check button", rows)
 	}
 }
 
@@ -77,8 +79,8 @@ func TestCheckRejectsUnsubscribedUser(t *testing.T) {
 	}
 }
 
-func TestCheckToleratesVKFailure(t *testing.T) {
-	join, _, chancesRepo, user, today := newJoinEnv(false, errors.New("vk is down"))
+func TestCheckToleratesSubscriptionFailure(t *testing.T) {
+	join, _, chancesRepo, user, today := newJoinEnv(false, errors.New("max is down"))
 
 	reply, err := join.Check(context.Background(), user, today)
 	if err != nil {
@@ -108,4 +110,22 @@ func TestCheckIsOncePerDay(t *testing.T) {
 	if len(repo.entries) != 1 {
 		t.Fatalf("entries after repeat = %d, want 1", len(repo.entries))
 	}
+}
+
+// keyboardRows counts the rows of a keyboard through its JSON form.
+func keyboardRows(t *testing.T, keyboard *maxapi.Keyboard) int {
+	t.Helper()
+	encoded, err := json.Marshal(keyboard)
+	if err != nil {
+		t.Fatalf("marshal keyboard: %v", err)
+	}
+	var decoded struct {
+		Buttons [][]struct {
+			Type string `json:"type"`
+		} `json:"buttons"`
+	}
+	if err := json.Unmarshal(encoded, &decoded); err != nil {
+		t.Fatalf("unmarshal keyboard: %v", err)
+	}
+	return len(decoded.Buttons)
 }

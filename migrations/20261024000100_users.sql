@@ -2,7 +2,7 @@
 -- +goose StatementBegin
 CREATE TABLE users (
     id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    vk_id      BIGINT NOT NULL,
+    max_id     BIGINT NOT NULL,
     first_name TEXT NOT NULL DEFAULT '',
     last_name  TEXT NOT NULL DEFAULT '',
     -- Состояние диалога для сбора контактов победителя: '', awaiting_name,
@@ -13,8 +13,8 @@ CREATE TABLE users (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE UNIQUE INDEX users_vk_id_unique
-    ON users (vk_id);
+CREATE UNIQUE INDEX users_max_id_unique
+    ON users (max_id);
 
 -- Статистика новых пользователей по дням.
 CREATE INDEX users_created_at_idx

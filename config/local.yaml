@@ -1,8 +1,6 @@
 env: local
 log_level: info
 shutdown_timeout: 10s
-# Баннер приветствия как вложение VK, например photo-123_456; пусто — без баннера.
-banner: ""
 
 http-server:
   address: ":8080"
@@ -19,16 +17,14 @@ database:
   query_timeout: 3s
   # url задается переменной окружения DATABASE_URL.
 
-vk:
-  # longpoll — локальная разработка без публичного адреса, callback — продакшен.
+max:
+  # longpoll — локальная разработка без публичного адреса, webhook — продакшен.
   mode: longpoll
-  group_id: 0
-  # token задается переменной окружения VK_TOKEN.
-  api_version: "5.199"
-  confirmation: "" # строка подтверждения Callback API
-  secret: "" # секрет Callback API, проверяется когда задан
+  api_url: "https://platform-api2.max.ru"
+  # access_token задается переменной окружения MAX_ACCESS_TOKEN.
   longpoll_wait: 25s
-  send_interval: 60ms
+  # Лимит платформы: не более двух сообщений в секунду в диалог.
+  send_interval: 600ms
 
 campaign:
   # start_date: "2026-11-01"

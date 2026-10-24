@@ -15,10 +15,10 @@ const (
 	StateAwaitingConsent = "awaiting_consent"
 )
 
-// User is a bot user identified by their VK id.
+// User is a bot user identified by their MAX id.
 type User struct {
 	ID        uuid.UUID
-	VKID      int64
+	MaxID     int64
 	FirstName string
 	LastName  string
 	State     UserState

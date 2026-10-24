@@ -29,11 +29,9 @@ type Repositories interface {
 type Dependencies struct {
 	// QueryTimeout bounds single storage operations.
 	QueryTimeout time.Duration
-	// Sender delivers bot messages; Subscriber checks VK subscriptions.
+	// Sender delivers bot messages; Subscriber checks MAX channel subscriptions.
 	Sender     Sender
 	Subscriber Subscriber
-	// Banner is the VK attachment of the welcome message.
-	Banner string
 	// Campaign describes the action for the «Мои шансы» screen.
 	Campaign CampaignView
 	// Final configures the final draw.
@@ -67,7 +65,7 @@ func New(repo Repositories, deps Dependencies) *Services {
 	join := NewJoinService(repo, repo, deps.Subscriber, chances, deps.QueryTimeout)
 	winners := NewWinnerService(repo, repo, repo, repo, deps.Sender, deps.QueryTimeout, deps.Log)
 	bot := NewBotService(repo, deps.Sender, promo, join, chances, winners,
-		deps.Banner, deps.Campaign.MaxChances, deps.Today, deps.Log)
+		deps.Campaign.MaxChances, deps.Today, deps.Log)
 	raffle := NewRaffleService(repo, repo, repo, deps.Final, deps.QueryTimeout)
 
 	return &Services{

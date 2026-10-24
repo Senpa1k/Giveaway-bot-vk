@@ -36,7 +36,7 @@ func approvedDraw() (*model.Draw, uuid.UUID) {
 
 func TestStartClaimWithoutPrize(t *testing.T) {
 	service, _, _, _, _ := newWinnerEnv()
-	user := model.User{ID: newUserID(), VKID: 1}
+	user := model.User{ID: newUserID(), MaxID: 1}
 
 	reply, err := service.StartClaim(context.Background(), &user)
 	if err != nil {
@@ -51,7 +51,7 @@ func TestClaimFlowCollectsContactData(t *testing.T) {
 	service, repo, users, _, _ := newWinnerEnv()
 	winner := model.Winner{ID: newUserID(), UserID: newUserID(), Status: model.WinnerStatusAwaitingResponse}
 	repo.winners = append(repo.winners, winner)
-	user := model.User{ID: winner.UserID, VKID: 7}
+	user := model.User{ID: winner.UserID, MaxID: 7}
 
 	// «Получить приз»: the bot asks for the name.
 	reply, err := service.StartClaim(context.Background(), &user)
@@ -101,7 +101,7 @@ func TestClaimFlowCollectsContactData(t *testing.T) {
 
 func TestSubmitNameRejectsTooShortAnswer(t *testing.T) {
 	service, _, users, _, _ := newWinnerEnv()
-	user := model.User{ID: newUserID(), VKID: 1}
+	user := model.User{ID: newUserID(), MaxID: 1}
 	users.states[user.ID] = model.UserState{State: model.StateAwaitingName, ID: newUserID()}
 
 	reply, err := service.SubmitName(context.Background(), &user, "Я")
@@ -120,7 +120,7 @@ func TestProcessConsentRefusalKeepsPrizeOpen(t *testing.T) {
 	service, repo, users, _, _ := newWinnerEnv()
 	winner := model.Winner{ID: newUserID(), UserID: newUserID(), Status: model.WinnerStatusContacted}
 	repo.winners = append(repo.winners, winner)
-	user := model.User{ID: winner.UserID, VKID: 7}
+	user := model.User{ID: winner.UserID, MaxID: 7}
 	users.states[user.ID] = model.UserState{State: model.StateAwaitingConsent, ID: winner.ID, Name: "Иван Петров"}
 
 	reply, err := service.ProcessConsent(context.Background(), &user, false)
@@ -151,8 +151,8 @@ func TestNotifyDrawAfterApproval(t *testing.T) {
 	}
 	reserve := model.Winner{ID: newUserID(), DrawID: draw.ID, UserID: newUserID(), Kind: model.WinnerKindReserve, Prize: "мерч"}
 	repo.winners = []model.Winner{winner, reserve}
-	users.users[winner.UserID] = model.User{ID: winner.UserID, VKID: 11}
-	users.users[reserve.UserID] = model.User{ID: reserve.UserID, VKID: 12}
+	users.users[winner.UserID] = model.User{ID: winner.UserID, MaxID: 11}
+	users.users[reserve.UserID] = model.User{ID: reserve.UserID, MaxID: 12}
 	service.partners = &fakePartnerRepo{partner: &model.Partner{
 		ID: partnerID, Name: "Партнер", PrizeInstruction: "Забери приз на стойке.",
 	}}
@@ -163,8 +163,8 @@ func TestNotifyDrawAfterApproval(t *testing.T) {
 	if len(sender.messages) != 1 {
 		t.Fatalf("sent messages = %d, want only the prize winner", len(sender.messages))
 	}
-	if sender.messages[0].peerID != 11 {
-		t.Fatalf("message peer = %d, want the winner", sender.messages[0].peerID)
+	if sender.messages[0].userID != 11 {
+		t.Fatalf("message peer = %d, want the winner", sender.messages[0].userID)
 	}
 	if !strings.Contains(sender.messages[0].text, "Ты в числе хедлайнеров дня") ||
 		!strings.Contains(sender.messages[0].text, "Забери приз на стойке.") {
@@ -194,7 +194,7 @@ func TestMissPromotesReserveWinner(t *testing.T) {
 	winner := model.Winner{ID: newUserID(), DrawID: draw.ID, UserID: newUserID(), Prize: "мерч", Status: model.WinnerStatusContacted}
 	reserve := model.Winner{ID: newUserID(), DrawID: draw.ID, UserID: newUserID(), Kind: model.WinnerKindReserve, Prize: "мерч", Status: model.WinnerStatusAwaitingResponse}
 	repo.winners = []model.Winner{winner, reserve}
-	users.users[reserve.UserID] = model.User{ID: reserve.UserID, VKID: 21}
+	users.users[reserve.UserID] = model.User{ID: reserve.UserID, MaxID: 21}
 	service.partners = &fakePartnerRepo{partner: &model.Partner{ID: partnerID, Name: "Партнер"}}
 
 	promoted, err := service.Miss(context.Background(), winner.ID)
@@ -207,7 +207,7 @@ func TestMissPromotesReserveWinner(t *testing.T) {
 	if saved, _ := repo.WinnerByID(context.Background(), winner.ID); saved.Status != model.WinnerStatusMissed {
 		t.Fatalf("missed winner status = %q, want missed", saved.Status)
 	}
-	if len(sender.messages) != 1 || sender.messages[0].peerID != 21 {
+	if len(sender.messages) != 1 || sender.messages[0].userID != 21 {
 		t.Fatalf("sent = %+v, want one message to the promoted winner", sender.messages)
 	}
 }

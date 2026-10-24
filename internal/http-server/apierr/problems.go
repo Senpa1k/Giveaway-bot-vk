@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-const typeBase = "https://giveaway-bot-vk.example/problems/"
+const typeBase = "https://giveaway-bot-max.example/problems/"
 
 // Problem is the error response body of the admin API.
 type Problem struct {
