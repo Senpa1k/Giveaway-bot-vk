@@ -8,6 +8,7 @@ import (
 
 // Dialog states of the winner contact flow. StateNone means the user is not
 // in a dialog and button commands work as usual.
+// States of the winner contact dialog.
 const (
 	StateNone            = ""
 	StateAwaitingName    = "awaiting_name"

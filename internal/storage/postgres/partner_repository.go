@@ -83,7 +83,7 @@ func (r *PartnerRepository) PartnerByID(ctx context.Context, id uuid.UUID) (*mod
 	return scanPartner(r.pool.QueryRow(ctx, query, args...))
 }
 
-// List returns all partners ordered by their day.
+// ListPartners returns all partners ordered by their day.
 func (r *PartnerRepository) ListPartners(ctx context.Context) ([]model.Partner, error) {
 	query, args, err := statementBuilder().
 		Select(partnerColumns).

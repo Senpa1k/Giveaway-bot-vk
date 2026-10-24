@@ -55,9 +55,9 @@ func run() error {
 	vk := vkapi.New(cfg.VK.Token, cfg.VK.APIVersion, cfg.VK.SendInterval)
 
 	today := func() time.Time {
-		day, err := cfg.Today(time.Now())
-		if err != nil {
-			log.Error("resolve campaign day failed", logger.Err(err))
+		day, dayErr := cfg.Today(time.Now())
+		if dayErr != nil {
+			log.Error("resolve campaign day failed", logger.Err(dayErr))
 			return time.Now()
 		}
 		return day
@@ -85,25 +85,25 @@ func run() error {
 	})
 
 	// The single event worker keeps the messages of a user ordered.
-	services.BotService.Start(ctx)
+	services.Start(ctx)
 
-	handleEvent := func(ctx context.Context, event vkapi.Event) {
+	handleEvent := func(_ context.Context, event vkapi.Event) {
 		if event.Type != vkapi.EventMessageNew {
 			return
 		}
-		message, err := event.Message()
-		if err != nil {
-			log.Error("decode message event failed", logger.Err(err))
+		message, msgErr := event.Message()
+		if msgErr != nil {
+			log.Error("decode message event failed", logger.Err(msgErr))
 			return
 		}
-		services.BotService.Enqueue(message)
+		services.Enqueue(message)
 	}
 
 	if cfg.VK.Mode == config.ModeLongPoll {
 		longPoll := vkapi.NewLongPoll(vk, cfg.VK.GroupID, cfg.VK.LongPollWait, log)
 		go func() {
-			if err := longPoll.Run(ctx, handleEvent); err != nil && ctx.Err() == nil {
-				log.Error("long poll stopped", logger.Err(err))
+			if runErr := longPoll.Run(ctx, handleEvent); runErr != nil && ctx.Err() == nil {
+				log.Error("long poll stopped", logger.Err(runErr))
 			}
 		}()
 	}
