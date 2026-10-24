@@ -49,8 +49,8 @@ func bearerToken(r *http.Request) (string, bool) {
 type createPartnerRequest struct {
 	Name             string `json:"name"`
 	Day              string `json:"day"`
-	VKGroupID        int64  `json:"vk_group_id"`
-	VKURL            string `json:"vk_url"`
+	MaxChannelID     int64  `json:"max_channel_id"`
+	MaxURL           string `json:"max_url"`
 	PromoValidUntil  string `json:"promo_valid_until"`
 	PromoWhere       string `json:"promo_where"`
 	PrizeName        string `json:"prize_name"`
@@ -62,8 +62,8 @@ type partnerResponse struct {
 	ID               uuid.UUID `json:"id"`
 	Name             string    `json:"name"`
 	Day              string    `json:"day"`
-	VKGroupID        int64     `json:"vk_group_id"`
-	VKURL            string    `json:"vk_url"`
+	MaxChannelID     int64     `json:"max_channel_id"`
+	MaxURL           string    `json:"max_url"`
 	PromoValidUntil  *string   `json:"promo_valid_until"`
 	PromoWhere       string    `json:"promo_where"`
 	PrizeName        string    `json:"prize_name"`
@@ -120,10 +120,10 @@ func newPartner(req createPartnerRequest) (*model.Partner, string) {
 		return nil, "name is too long"
 	case req.Day == "":
 		return nil, "day is required (YYYY-MM-DD)"
-	case req.VKGroupID <= 0:
-		return nil, "vk_group_id must be a positive community id"
-	case strings.TrimSpace(req.VKURL) == "":
-		return nil, "vk_url is required"
+	case req.MaxChannelID <= 0:
+		return nil, "max_channel_id must be a positive community id"
+	case strings.TrimSpace(req.MaxURL) == "":
+		return nil, "max_url is required"
 	case strings.TrimSpace(req.PrizeName) == "":
 		return nil, "prize_name is required"
 	case utf8.RuneCountInString(req.PrizeName) > maxPrizeTextLen:
@@ -140,8 +140,8 @@ func newPartner(req createPartnerRequest) (*model.Partner, string) {
 	partner := &model.Partner{
 		Name:             strings.TrimSpace(req.Name),
 		Day:              day,
-		VKGroupID:        req.VKGroupID,
-		VKURL:            strings.TrimSpace(req.VKURL),
+		MaxChannelID:     req.MaxChannelID,
+		MaxURL:           strings.TrimSpace(req.MaxURL),
 		PromoWhere:       strings.TrimSpace(req.PromoWhere),
 		PrizeName:        strings.TrimSpace(req.PrizeName),
 		PrizeInstruction: strings.TrimSpace(req.PrizeInstruction),
@@ -169,8 +169,8 @@ func toPartnerResponse(partner *model.Partner) partnerResponse {
 		ID:               partner.ID,
 		Name:             partner.Name,
 		Day:              partner.Day.Format(time.DateOnly),
-		VKGroupID:        partner.VKGroupID,
-		VKURL:            partner.VKURL,
+		MaxChannelID:     partner.MaxChannelID,
+		MaxURL:           partner.MaxURL,
 		PromoWhere:       partner.PromoWhere,
 		PrizeName:        partner.PrizeName,
 		PrizeInstruction: partner.PrizeInstruction,

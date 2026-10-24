@@ -10,8 +10,8 @@ import (
 	"unicode/utf8"
 
 	"github.com/Senpa1k/Giveaway-bot-vk/internal/lib/logger"
+	"github.com/Senpa1k/Giveaway-bot-vk/internal/maxapi"
 	"github.com/Senpa1k/Giveaway-bot-vk/internal/model"
-	"github.com/Senpa1k/Giveaway-bot-vk/internal/vkapi"
 
 	"github.com/google/uuid"
 )
@@ -131,9 +131,9 @@ func (s *WinnerService) NotifyDraw(ctx context.Context, drawID uuid.UUID) error 
 			s.log.Error("build winner message failed", logger.Err(buildErr), slog.String("winner_id", winner.ID.String()))
 			continue
 		}
-		if err = s.sender.MessagesSend(ctx, user.VKID, reply.Text, reply.Keyboard, ""); err != nil {
-			if vkapi.IsCantSend(err) {
-				s.log.Warn("cannot message the winner", logger.Err(err), slog.Int64("vk_id", user.VKID))
+		if err = s.sender.SendMessage(ctx, user.MaxID, reply.Text, reply.Keyboard); err != nil {
+			if maxapi.IsCantSend(err) {
+				s.log.Warn("cannot message the winner", logger.Err(err), slog.Int64("max_id", user.MaxID))
 				continue
 			}
 			s.log.Error("notify winner failed", logger.Err(err), slog.String("winner_id", winner.ID.String()))
@@ -273,8 +273,8 @@ func (s *WinnerService) notifyPromoted(ctx context.Context, missed, reserve mode
 		s.log.Error("promoted winner has no user row", slog.String("winner_id", reserve.ID.String()))
 		return
 	}
-	if err = s.sender.MessagesSend(ctx, user.VKID, reply.Text, reply.Keyboard, ""); err != nil {
-		s.log.Error("notify promoted winner failed", logger.Err(err), slog.Int64("vk_id", user.VKID))
+	if err = s.sender.SendMessage(ctx, user.MaxID, reply.Text, reply.Keyboard); err != nil {
+		s.log.Error("notify promoted winner failed", logger.Err(err), slog.Int64("max_id", user.MaxID))
 	}
 	if err = s.repo.MarkWinnersNotified(queryCtx, []uuid.UUID{reserve.ID}); err != nil {
 		s.log.Error("mark promoted winner notified", logger.Err(err))
@@ -283,8 +283,8 @@ func (s *WinnerService) notifyPromoted(ctx context.Context, missed, reserve mode
 
 // winnerReply builds the winner message of one prize.
 func (s *WinnerService) winnerReply(ctx context.Context, draw *model.Draw, winner *model.Winner) (*Reply, error) {
-	keyboard := vkapi.NewInlineKeyboard().
-		TextRow("Получить приз", CmdClaim, vkapi.ColorPositive)
+	keyboard := maxapi.NewInlineKeyboard().
+		CallbackRow("Получить приз", CmdClaim)
 
 	if draw.Kind == model.DrawKindFinal {
 		return &Reply{

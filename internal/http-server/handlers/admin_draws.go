@@ -39,7 +39,7 @@ type winnerResponse struct {
 	Prize        string     `json:"prize"`
 	Tickets      int        `json:"tickets"`
 	UserID       uuid.UUID  `json:"user_id"`
-	VKID         int64      `json:"vk_id"`
+	MaxID        int64      `json:"max_id"`
 	ContactName  string     `json:"contact_name"`
 	ConsentGiven bool       `json:"consent_given"`
 	NotifiedAt   *time.Time `json:"notified_at"`
@@ -47,7 +47,7 @@ type winnerResponse struct {
 
 type participantResponse struct {
 	UserID       uuid.UUID `json:"user_id"`
-	VKID         int64     `json:"vk_id"`
+	MaxID        int64     `json:"max_id"`
 	RegisteredAt time.Time `json:"registered_at"`
 }
 
@@ -198,7 +198,7 @@ func (s *Server) approveDraw(w http.ResponseWriter, r *http.Request) {
 type missWinnerResponse struct {
 	MissedWinnerID   uuid.UUID  `json:"missed_winner_id"`
 	PromotedWinnerID *uuid.UUID `json:"promoted_winner_id"`
-	PromotedVKID     *int64     `json:"promoted_vk_id"`
+	PromotedMaxID    *int64     `json:"promoted_max_id"`
 }
 
 // missWinner closes a missed prize and hands it to the first reserve winner
@@ -222,7 +222,7 @@ func (s *Server) missWinner(w http.ResponseWriter, r *http.Request) {
 			s.log.ErrorContext(r.Context(), "load promoted winner failed", logger.Err(err))
 		} else if user, found := users[promoted.UserID]; found {
 			response.PromotedWinnerID = &promoted.ID
-			response.PromotedVKID = &user.VKID
+			response.PromotedMaxID = &user.MaxID
 		}
 	}
 	writeJSON(w, r, http.StatusOK, response)
@@ -249,16 +249,16 @@ func (s *Server) exportDraw(w http.ResponseWriter, r *http.Request) {
 	var buffer bytes.Buffer
 	writer := csv.NewWriter(&buffer)
 	if r.URL.Query().Get("type") == "participants" {
-		_ = writer.Write([]string{"vk_id", "user_id", "registered_at"})
+		_ = writer.Write([]string{"max_id", "user_id", "registered_at"})
 		for _, participant := range detail.Participants {
 			_ = writer.Write([]string{
-				int64String(participant.VKID),
+				int64String(participant.MaxID),
 				participant.UserID.String(),
 				participant.RegisteredAt.Format(time.RFC3339),
 			})
 		}
 	} else {
-		_ = writer.Write([]string{"position", "kind", "status", "prize", "tickets", "vk_id", "user_id", "contact_name", "consent_given", "notified_at"})
+		_ = writer.Write([]string{"position", "kind", "status", "prize", "tickets", "max_id", "user_id", "contact_name", "consent_given", "notified_at"})
 		for _, winner := range detail.Winners {
 			notifiedAt := ""
 			if winner.NotifiedAt != nil {
@@ -270,7 +270,7 @@ func (s *Server) exportDraw(w http.ResponseWriter, r *http.Request) {
 				winner.Status,
 				winner.Prize,
 				intString(winner.Tickets),
-				int64String(winner.VKID),
+				int64String(winner.MaxID),
 				winner.UserID.String(),
 				winner.ContactName,
 				boolString(winner.ConsentGiven),
@@ -386,7 +386,7 @@ func (s *Server) drawDetail(w http.ResponseWriter, r *http.Request, draw *model.
 			Prize:        winner.Prize,
 			Tickets:      winner.Tickets,
 			UserID:       winner.UserID,
-			VKID:         users[winner.UserID].VKID,
+			MaxID:        users[winner.UserID].MaxID,
 			ContactName:  winner.ContactName,
 			ConsentGiven: winner.ConsentGiven,
 			NotifiedAt:   winner.NotifiedAt,
@@ -395,7 +395,7 @@ func (s *Server) drawDetail(w http.ResponseWriter, r *http.Request, draw *model.
 	for _, entry := range entries {
 		response.Participants = append(response.Participants, participantResponse{
 			UserID:       entry.UserID,
-			VKID:         users[entry.UserID].VKID,
+			MaxID:        users[entry.UserID].MaxID,
 			RegisteredAt: entry.CreatedAt,
 		})
 	}

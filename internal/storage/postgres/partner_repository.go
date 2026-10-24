@@ -15,7 +15,7 @@ import (
 )
 
 // partnerColumns is the select list of the partners table.
-const partnerColumns = "id, name, day, vk_group_id, vk_url, promo_valid_until, promo_where, prize_name, prize_instruction, winners_count, created_at"
+const partnerColumns = "id, name, day, max_channel_id, max_url, promo_valid_until, promo_where, prize_name, prize_instruction, winners_count, created_at"
 
 // PartnerRepository stores action partners.
 type PartnerRepository struct {
@@ -31,12 +31,12 @@ func NewPartnerRepository(pool *pgxpool.Pool) *PartnerRepository {
 func (r *PartnerRepository) Create(ctx context.Context, partner *model.Partner) error {
 	query, args, err := statementBuilder().
 		Insert("partners").
-		Columns("name", "day", "vk_group_id", "vk_url", "promo_valid_until", "promo_where", "prize_name", "prize_instruction", "winners_count").
+		Columns("name", "day", "max_channel_id", "max_url", "promo_valid_until", "promo_where", "prize_name", "prize_instruction", "winners_count").
 		Values(
 			partner.Name,
 			sq.Expr("?::date", partner.Day.Format(time.DateOnly)),
-			partner.VKGroupID,
-			partner.VKURL,
+			partner.MaxChannelID,
+			partner.MaxURL,
 			dateExpr(partner.PromoValidUntil),
 			partner.PromoWhere,
 			partner.PrizeName,
@@ -121,8 +121,8 @@ func scanPartner(row pgx.Row) (*model.Partner, error) {
 		&partner.ID,
 		&partner.Name,
 		&partner.Day,
-		&partner.VKGroupID,
-		&partner.VKURL,
+		&partner.MaxChannelID,
+		&partner.MaxURL,
 		&partner.PromoValidUntil,
 		&partner.PromoWhere,
 		&partner.PrizeName,

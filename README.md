@@ -1,20 +1,20 @@
-# Giveaway-bot-vk
+# Giveaway-bot (MAX)
 
-Чат-бот сообщества VK для ежедневных розыгрышей партнеров и финального
+Чат-бот мессенджера MAX для ежедневных розыгрышей партнеров и финального
 розыгрыша главного приза. Go + PostgreSQL, архитектура и код-стайл перенесены
 из проекта GorkyCode: слои `http-server/handlers` → `service` → `storage`,
 миграции goose, единый golangci-lint, Makefile.
 
 ## Что умеет
 
-- **Запуск** — приветствие с баннером и главным меню: «Получить промокод»,
+- **Запуск** — приветствие и главное меню: «Получить промокод»,
   «Участвовать в розыгрыше», «Как участвовать», «Мои шансы», «Правила акции».
 - **Промокоды** — уникальный код партнера дня с инструкцией; повторное
   нажатие в тот же день показывает закрепленный код; когда коды закончились,
   участие в розыгрыше остается доступным.
-- **Ежедневный розыгрыш** — обязательная подписка на аккаунт партнера,
-  автоматическая проверка `groups.isMember` с неограниченными повторами,
-  одна заявка на пользователя в день.
+- **Ежедневный розыгрыш** — обязательная подписка на канал партнера,
+  автоматическая проверка `GET /chats/{id}/members` с неограниченными
+  повторами, одна заявка на пользователя в день.
 - **Шансы** — один активный день (промокод или регистрация) = один шанс в
   финале, максимум 10; раздел «Мои шансы» с прогрессом и партнерами.
 - **Розыгрыши** — ежедневный запускается автоматически по расписанию;
@@ -31,37 +31,49 @@
 
 Нужны Docker и Docker Compose.
 
-1. `cp .env.example .env` и заполните `VK_TOKEN`, `VK_GROUP_ID`, `ADMIN_TOKEN`.
-2. `docker compose up --build -d`.
-3. Примените миграции: `make migrate` (из корня, `DATABASE_URL` берется из
+1. Зарегистрируйте бота на [dev.max.ru](https://dev.max.ru) и получите
+   access token (переменная `MAX_ACCESS_TOKEN`).
+2. `cp .env.example .env` и заполните `MAX_ACCESS_TOKEN`, `ADMIN_TOKEN`.
+3. `docker compose up --build -d`.
+4. Примените миграции: `make migrate` (из корня, `DATABASE_URL` берется из
    `.env`; goose скачается через `go run`, если не установлен).
-4. Создайте партнера и загрузите промокоды через admin API (примеры ниже).
-5. Локальная проверка: `http://localhost:8080/health` и `/ready`.
+5. Создайте партнера и загрузите промокоды через admin API (примеры ниже).
+6. Локальная проверка: `http://localhost:8080/health` и `/ready`.
 
 Запуск вне Docker: `docker compose up -d postgres`, затем `make run`.
 
-## Настройка сообщества VK
+## Настройка бота в MAX
 
-1. Управление сообществом → «Сообщения» → включить сообщения сообщества,
-   настроить кнопку «Начать».
-2. «Работа с API» → «Ключи доступа» → создать ключ с правами
-   `messages`, `groups` — это `VK_TOKEN`.
-3. **Режим longpoll** (`VK_MODE=longpoll`) — для локальной разработки: бот сам
-   забирает события, публичный адрес не нужен. Укажите `VK_GROUP_ID`.
-4. **Режим callback** (`VK_MODE=callback`) — для продакшена: в разделе
-   «Callback API» укажите `https://<ваш-домен>/callback`, скопируйте строку
-   подтверждения в `VK_CONFIRMATION` и задайте `VK_SECRET` (бот проверяет
-   секрет каждого события).
+1. Создайте бота в кабинете [dev.max.ru](https://dev.max.ru), включите
+   сообщения бота и кнопку «Начать» — скопируйте **access token**
+   в `MAX_ACCESS_TOKEN`.
+2. Добавьте бота **администратором** в каналы партнеров: проверка подписки
+   `GET /chats/{chat_id}/members?user_ids=...` работает только с правами
+   администратора.
+3. **Режим longpoll** (`MAX_MODE=longpoll`) — для локальной разработки: бот
+   сам забирает события через `GET /updates`, публичный адрес не нужен.
+4. **Режим webhook** (`MAX_MODE=webhook`) — для продакшена: поднимите бот с
+   публичным HTTPS-адресом и подпишите его на события:
+
+   ```bash
+   curl -X POST https://platform-api2.max.ru/subscriptions \
+     -H "Authorization: $MAX_ACCESS_TOKEN" -H "Content-Type: application/json" \
+     -d '{"url":"https://<ваш-домен>/callback","update_types":["bot_started","message_created","message_callback"]}'
+   ```
+
+Все запросы к Bot API идут на `platform-api2.max.ru` (домен
+`botapi.max.ru` отключен) с токеном в заголовке `Authorization`.
+Лимит платформы: не более двух сообщений в секунду в диалог — клиент бота
+соблюдает его автоматически.
 
 ## Переменные окружения
 
 | Переменная | Назначение |
 |---|---|
 | `DATABASE_URL` | строка подключения PostgreSQL |
-| `VK_MODE` | `longpoll` или `callback` |
-| `VK_GROUP_ID` | ID сообщества (нужен в longpoll) |
-| `VK_TOKEN` | ключ доступа сообщества |
-| `VK_CONFIRMATION` / `VK_SECRET` | строка подтверждения и секрет Callback API |
+| `MAX_MODE` | `longpoll` или `webhook` |
+| `MAX_ACCESS_TOKEN` | access token бота из dev.max.ru |
+| `MAX_API_URL` | базовый URL Bot API (по умолчанию `https://platform-api2.max.ru`) |
 | `ADMIN_TOKEN` | bearer-токен admin API |
 | `CAMPAIGN_START_DATE` / `CAMPAIGN_END_DATE` | сроки акции (`YYYY-MM-DD`) |
 | `CAMPAIGN_MAIN_PRIZE` | текст главного приза |
@@ -69,7 +81,6 @@
 | `DRAW_TIME` / `DRAW_TIMEZONE` | время ежедневного розыгрыша |
 | `DRAW_FINAL_WINNERS` / `DRAW_TICKETS_PER_WINNER` / `DRAW_RESERVE_COUNT` | параметры финала |
 | `DRAW_AUTO_FINAL` | запускать финальный розыгрыш автоматически в последний день |
-| `BANNER` | вложение-баннер приветствия, например `photo-123_456` |
 
 Полный список значений по умолчанию — в `config/local.yaml`.
 
@@ -82,7 +93,7 @@
 # Партнер дня
 curl -X POST http://localhost:8080/api/admin/partners \
   -H "Authorization: Bearer $ADMIN_TOKEN" -H "Content-Type: application/json" \
-  -d '{"name":"Партнер","day":"2026-11-01","vk_group_id":123,"vk_url":"https://vk.com/partner",
+  -d '{"name":"Партнер","day":"2026-11-01","max_channel_id":123,"max_url":"https://max.ru/partner",
        "promo_valid_until":"2026-11-10","promo_where":"сайте partner.ru",
        "prize_name":"мерч-пакет","prize_instruction":"Забери приз на стойке.","winners_count":2}'
 
@@ -145,13 +156,16 @@ cmd/bot/            точка входа
 internal/config/    настройки (cleanenv, YAML + env)
 internal/model/     доменные сущности и sentinel-ошибки
 internal/storage/   postgres-репозитории (pgx + squirrel)
-internal/vkapi/     клиент VK API, клавиатуры, callback/longpoll события
+internal/maxapi/    клиент MAX Bot API, клавиатуры, события, long polling
 internal/service/   сценарии: бот, промокоды, участие, шансы, розыгрыши,
                     победители, статистика, рассылка
 internal/scheduler/ автоматический запуск розыгрышей
-internal/http-server/  callback VK + admin API + health
+internal/http-server/  webhook MAX + admin API + health
 ```
 
 Обработчики зависят от интерфейсов сервисов, сервисы — от интерфейсов
 репозиториев; реальные типы собираются в `storage.NewRepository` и
 `service.New` (как в GorkyCode).
+
+> Имя репозитория историческое: проект начинался как бот VK, но целевая
+> платформа — мессенджер MAX.

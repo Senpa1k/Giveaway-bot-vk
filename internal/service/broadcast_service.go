@@ -5,12 +5,12 @@ import (
 	"log/slog"
 
 	"github.com/Senpa1k/Giveaway-bot-vk/internal/lib/logger"
-	"github.com/Senpa1k/Giveaway-bot-vk/internal/vkapi"
+	"github.com/Senpa1k/Giveaway-bot-vk/internal/maxapi"
 )
 
 // BroadcastUsers lists the recipients of broadcasts.
 type BroadcastUsers interface {
-	AllVKIDs(ctx context.Context) ([]int64, error)
+	AllMaxIDs(ctx context.Context) ([]int64, error)
 }
 
 // BroadcastService pushes a text message to every bot user. The client paces
@@ -29,18 +29,18 @@ func NewBroadcastService(users BroadcastUsers, sender Sender, log *slog.Logger) 
 // Send delivers the text to all users and returns the delivery counts.
 // Undeliverable users are counted as failed and do not stop the run.
 func (s *BroadcastService) Send(ctx context.Context, text string) (sent, failed int, err error) {
-	vkIDs, err := s.users.AllVKIDs(ctx)
+	maxIDs, err := s.users.AllMaxIDs(ctx)
 	if err != nil {
 		return 0, 0, err
 	}
 
-	for _, vkID := range vkIDs {
-		if err := s.sender.MessagesSend(ctx, vkID, text, nil, ""); err != nil {
-			if vkapi.IsCantSend(err) {
+	for _, maxID := range maxIDs {
+		if err := s.sender.SendMessage(ctx, maxID, text, nil); err != nil {
+			if maxapi.IsCantSend(err) {
 				failed++
 				continue
 			}
-			s.log.Error("broadcast send failed", logger.Err(err), slog.Int64("vk_id", vkID))
+			s.log.Error("broadcast send failed", logger.Err(err), slog.Int64("max_id", maxID))
 			failed++
 			continue
 		}

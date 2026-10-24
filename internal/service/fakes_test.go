@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/Senpa1k/Giveaway-bot-vk/internal/maxapi"
 	"github.com/Senpa1k/Giveaway-bot-vk/internal/model"
-	"github.com/Senpa1k/Giveaway-bot-vk/internal/vkapi"
 
 	"github.com/google/uuid"
 )
@@ -17,9 +17,9 @@ func newUserID() uuid.UUID {
 
 // sentMessage records one outgoing bot message.
 type sentMessage struct {
-	peerID   int64
+	userID   int64
 	text     string
-	keyboard *vkapi.Keyboard
+	keyboard *maxapi.Keyboard
 }
 
 // fakeSender records the messages instead of sending them.
@@ -28,15 +28,15 @@ type fakeSender struct {
 	err      error
 }
 
-func (f *fakeSender) MessagesSend(_ context.Context, peerID int64, text string, keyboard *vkapi.Keyboard, _ string) error {
+func (f *fakeSender) SendMessage(_ context.Context, userID int64, text string, keyboard *maxapi.Keyboard) error {
 	if f.err != nil {
 		return f.err
 	}
-	f.messages = append(f.messages, sentMessage{peerID: peerID, text: text, keyboard: keyboard})
+	f.messages = append(f.messages, sentMessage{userID: userID, text: text, keyboard: keyboard})
 	return nil
 }
 
-// fakeSubscriber answers VK subscription checks with a fixed result.
+// fakeSubscriber answers subscription checks with a fixed result.
 type fakeSubscriber struct {
 	member bool
 	err    error

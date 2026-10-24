@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/Senpa1k/Giveaway-bot-vk/internal/lib/logger"
+	"github.com/Senpa1k/Giveaway-bot-vk/internal/maxapi"
 	"github.com/Senpa1k/Giveaway-bot-vk/internal/model"
-	"github.com/Senpa1k/Giveaway-bot-vk/internal/vkapi"
 
 	"github.com/google/uuid"
 )
@@ -18,7 +18,7 @@ const eventQueueSize = 1024
 
 // BotRepository is the user storage used by the bot router.
 type BotRepository interface {
-	UpsertByVKID(ctx context.Context, vkID int64) (*model.User, error)
+	UpsertByMaxID(ctx context.Context, maxID int64) (*model.User, error)
 	SetState(ctx context.Context, id uuid.UUID, state model.UserState) error
 }
 
@@ -38,10 +38,9 @@ type BotService struct {
 	join       *JoinService
 	chances    *ChancesService
 	claims     BotClaims
-	banner     string
 	maxChances int
 	today      func() time.Time
-	events     chan vkapi.IncomingMessage
+	events     chan maxapi.IncomingMessage
 	log        *slog.Logger
 }
 
@@ -54,7 +53,6 @@ func NewBotService(
 	join *JoinService,
 	chances *ChancesService,
 	claims BotClaims,
-	banner string,
 	maxChances int,
 	today func() time.Time,
 	log *slog.Logger,
@@ -66,10 +64,9 @@ func NewBotService(
 		join:       join,
 		chances:    chances,
 		claims:     claims,
-		banner:     banner,
 		maxChances: maxChances,
 		today:      today,
-		events:     make(chan vkapi.IncomingMessage, eventQueueSize),
+		events:     make(chan maxapi.IncomingMessage, eventQueueSize),
 		log:        log,
 	}
 }
@@ -91,13 +88,13 @@ func (s *BotService) Start(ctx context.Context) {
 
 // Enqueue takes an incoming message for processing; false means the queue
 // is full and the message is dropped.
-func (s *BotService) Enqueue(msg vkapi.IncomingMessage) bool {
+func (s *BotService) Enqueue(msg maxapi.IncomingMessage) bool {
 	select {
 	case s.events <- msg:
 		return true
 	default:
 		s.log.Error("event queue is full, message dropped",
-			slog.Int64("vk_id", msg.FromID),
+			slog.Int64("max_id", msg.UserID),
 			slog.String("text", msg.TrimmedText()),
 		)
 		return false
@@ -106,32 +103,32 @@ func (s *BotService) Enqueue(msg vkapi.IncomingMessage) bool {
 
 // handleSafely processes one message, recovering a panic so the worker
 // keeps serving the queue.
-func (s *BotService) handleSafely(ctx context.Context, msg vkapi.IncomingMessage) {
+func (s *BotService) handleSafely(ctx context.Context, msg maxapi.IncomingMessage) {
 	defer func() {
 		if recovered := recover(); recovered != nil {
 			s.log.Error("message handling panicked",
 				slog.Any("panic", recovered),
-				slog.Int64("vk_id", msg.FromID),
+				slog.Int64("max_id", msg.UserID),
 			)
 		}
 	}()
 	if err := s.handle(ctx, msg); err != nil {
-		s.log.Error("message handling failed", logger.Err(err), slog.Int64("vk_id", msg.FromID))
+		s.log.Error("message handling failed", logger.Err(err), slog.Int64("max_id", msg.UserID))
 	}
 }
 
 // handle routes one message to its flow and sends the reply.
-func (s *BotService) handle(ctx context.Context, msg vkapi.IncomingMessage) error {
-	if !msg.IsPrivate() {
+func (s *BotService) handle(ctx context.Context, msg maxapi.IncomingMessage) error {
+	if !msg.Dialog {
 		return nil
 	}
 
-	user, err := s.users.UpsertByVKID(ctx, msg.FromID)
+	user, err := s.users.UpsertByMaxID(ctx, msg.UserID)
 	if err != nil {
-		return fmt.Errorf("upsert user %d: %w", msg.FromID, err)
+		return fmt.Errorf("upsert user %d: %w", msg.UserID, err)
 	}
 
-	cmd := msg.Command()
+	cmd := msg.Command
 	if cmd == "" {
 		cmd = CommandByText(msg.Text)
 	}
@@ -149,7 +146,7 @@ func (s *BotService) handle(ctx context.Context, msg vkapi.IncomingMessage) erro
 func (s *BotService) route(
 	ctx context.Context,
 	user *model.User,
-	msg vkapi.IncomingMessage,
+	msg maxapi.IncomingMessage,
 	cmd string,
 ) (*Reply, error) {
 	switch user.State.State {
@@ -179,7 +176,7 @@ func (s *BotService) route(
 
 	switch cmd {
 	case CmdStart:
-		return welcomeReply(s.banner), nil
+		return welcomeReply(), nil
 	case CmdPromo:
 		return s.promo.Handle(ctx, user, s.today())
 	case CmdJoin:
@@ -201,11 +198,11 @@ func (s *BotService) route(
 
 // send delivers the reply, tolerating users who cannot receive messages.
 func (s *BotService) send(ctx context.Context, user *model.User, reply *Reply) {
-	if err := s.sender.MessagesSend(ctx, user.VKID, reply.Text, reply.Keyboard, reply.Attachment); err != nil {
-		if vkapi.IsCantSend(err) {
-			s.log.Warn("cannot message the user", logger.Err(err), slog.Int64("vk_id", user.VKID))
+	if err := s.sender.SendMessage(ctx, user.MaxID, reply.Text, reply.Keyboard); err != nil {
+		if maxapi.IsCantSend(err) {
+			s.log.Warn("cannot message the user", logger.Err(err), slog.Int64("max_id", user.MaxID))
 			return
 		}
-		s.log.Error("send message failed", logger.Err(err), slog.Int64("vk_id", user.VKID))
+		s.log.Error("send message failed", logger.Err(err), slog.Int64("max_id", user.MaxID))
 	}
 }

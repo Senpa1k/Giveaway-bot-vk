@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Senpa1k/Giveaway-bot-vk/internal/maxapi"
 	"github.com/Senpa1k/Giveaway-bot-vk/internal/model"
-	"github.com/Senpa1k/Giveaway-bot-vk/internal/vkapi"
 )
 
 // Button commands carried by keyboard payloads and text aliases.
@@ -46,20 +46,19 @@ func CommandByText(text string) string {
 }
 
 // mainMenu is the keyboard of the welcome screen and help replies.
-func mainMenu() *vkapi.Keyboard {
-	return vkapi.NewInlineKeyboard().
-		TextRow("Получить промокод", CmdPromo, vkapi.ColorPrimary).
-		TextRow("Участвовать в розыгрыше", CmdJoin, vkapi.ColorPrimary).
-		TextRow("Как участвовать", CmdHowTo, vkapi.ColorSecondary).
-		TextRow("Мои шансы", CmdChances, vkapi.ColorSecondary).
-		TextRow("Правила акции", CmdRules, vkapi.ColorSecondary)
+func mainMenu() *maxapi.Keyboard {
+	return maxapi.NewInlineKeyboard().
+		CallbackRow("Получить промокод", CmdPromo).
+		CallbackRow("Участвовать в розыгрыше", CmdJoin).
+		CallbackRow("Как участвовать", CmdHowTo).
+		CallbackRow("Мои шансы", CmdChances).
+		CallbackRow("Правила акции", CmdRules)
 }
 
-func welcomeReply(banner string) *Reply {
+func welcomeReply() *Reply {
 	return &Reply{
-		Text:       "Добро пожаловать в Бот розыгрышей",
-		Keyboard:   mainMenu(),
-		Attachment: banner,
+		Text:     "Добро пожаловать в Бот розыгрышей",
+		Keyboard: mainMenu(),
 	}
 }
 
@@ -94,8 +93,8 @@ func promoSuccessReply(partner *model.Partner, code string) *Reply {
 
 	return &Reply{
 		Text: text,
-		Keyboard: vkapi.NewInlineKeyboard().
-			TextRow("Участвовать в розыгрыше", CmdJoin, vkapi.ColorPrimary),
+		Keyboard: maxapi.NewInlineKeyboard().
+			CallbackRow("Участвовать в розыгрыше", CmdJoin),
 	}
 }
 
@@ -106,8 +105,8 @@ func promoDepletedReply(partner *model.Partner) *Reply {
 				"Но ты все еще можешь подписаться на партнера и принять участие в розыгрыше призов дня.",
 			partner.Name,
 		),
-		Keyboard: vkapi.NewInlineKeyboard().
-			TextRow("Участвовать в розыгрыше", CmdJoin, vkapi.ColorPrimary),
+		Keyboard: maxapi.NewInlineKeyboard().
+			CallbackRow("Участвовать в розыгрыше", CmdJoin),
 	}
 }
 
@@ -117,18 +116,18 @@ func joinScreenReply(partner *model.Partner) *Reply {
 			"Чтобы попасть в розыгрыш призов от %s, подпишись на аккаунт партнера.",
 			partner.Name,
 		),
-		Keyboard: vkapi.NewInlineKeyboard().
-			LinkRow("Подписаться на "+partner.Name, partner.VKURL).
-			TextRow("Проверить подписку", CmdCheck, vkapi.ColorPrimary),
+		Keyboard: maxapi.NewInlineKeyboard().
+			LinkRow("Подписаться на "+partner.Name, partner.MaxURL).
+			CallbackRow("Проверить подписку", CmdCheck),
 	}
 }
 
-// subscriptionFailedReply asks to retry when the VK check itself failed.
+// subscriptionFailedReply asks to retry when the subscription check itself failed.
 func subscriptionFailedReply() *Reply {
 	return &Reply{
 		Text: "Не получилось проверить подписку — попробуй еще раз через минуту.",
-		Keyboard: vkapi.NewInlineKeyboard().
-			TextRow("Проверить подписку", CmdCheck, vkapi.ColorPrimary),
+		Keyboard: maxapi.NewInlineKeyboard().
+			CallbackRow("Проверить подписку", CmdCheck),
 	}
 }
 
@@ -138,9 +137,9 @@ func notSubscribedReply(partner *model.Partner) *Reply {
 			"Пока не вижу подписку 👀\n\nПодпишись на аккаунт %s, вернись в бот и попробуй еще раз.",
 			partner.Name,
 		),
-		Keyboard: vkapi.NewInlineKeyboard().
-			LinkRow("Подписаться", partner.VKURL).
-			TextRow("Проверить еще раз", CmdCheck, vkapi.ColorPrimary),
+		Keyboard: maxapi.NewInlineKeyboard().
+			LinkRow("Подписаться", partner.MaxURL).
+			CallbackRow("Проверить еще раз", CmdCheck),
 	}
 }
 
@@ -234,8 +233,8 @@ func claimPrompt(name string) *Reply {
 			"Передадим твои данные (%s) партнеру или билетному оператору, чтобы ты получил приз.\n\nСогласен на передачу данных?",
 			name,
 		),
-		Keyboard: vkapi.NewInlineKeyboard().
-			TextRow("Согласен, передать данные", CmdConsentYes, vkapi.ColorPositive).
-			TextRow("Отказаться", CmdConsentNo, vkapi.ColorNegative),
+		Keyboard: maxapi.NewInlineKeyboard().
+			CallbackRow("Согласен, передать данные", CmdConsentYes).
+			CallbackRow("Отказаться", CmdConsentNo),
 	}
 }

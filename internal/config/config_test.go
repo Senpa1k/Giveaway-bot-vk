@@ -7,10 +7,10 @@ import (
 
 func validConfig() *Config {
 	return &Config{
-		VK: VK{
-			Mode:    ModeLongPoll,
-			GroupID: 1,
-			Token:   "token",
+		MAX: MAX{
+			Mode:        ModeLongPoll,
+			APIURL:      "https://platform-api2.max.ru",
+			AccessToken: "token",
 		},
 		Campaign: Campaign{
 			StartDate:  "2026-11-01",
@@ -32,6 +32,12 @@ func TestValidateAcceptsValidConfig(t *testing.T) {
 	if err := validConfig().validate(); err != nil {
 		t.Fatalf("validate() = %v, want nil", err)
 	}
+
+	webhook := validConfig()
+	webhook.MAX.Mode = ModeWebhook
+	if err := webhook.validate(); err != nil {
+		t.Fatalf("validate() in webhook mode = %v, want nil", err)
+	}
 }
 
 func TestValidateRejectsBrokenSettings(t *testing.T) {
@@ -39,12 +45,8 @@ func TestValidateRejectsBrokenSettings(t *testing.T) {
 		name   string
 		mutate func(*Config)
 	}{
-		{"unknown vk mode", func(c *Config) { c.VK.Mode = "sms" }},
-		{"longpoll without group", func(c *Config) { c.VK.GroupID = 0 }},
-		{"callback without confirmation", func(c *Config) {
-			c.VK.Mode = ModeCallback
-			c.VK.Confirmation = ""
-		}},
+		{"unknown max mode", func(c *Config) { c.MAX.Mode = "sms" }},
+		{"empty api url", func(c *Config) { c.MAX.APIURL = " " }},
 		{"bad start date", func(c *Config) { c.Campaign.StartDate = "01.11.2026" }},
 		{"end before start", func(c *Config) {
 			c.Campaign.StartDate = "2026-11-10"

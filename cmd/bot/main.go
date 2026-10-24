@@ -18,11 +18,11 @@ import (
 	"github.com/Senpa1k/Giveaway-bot-vk/internal/config"
 	"github.com/Senpa1k/Giveaway-bot-vk/internal/http-server/handlers"
 	"github.com/Senpa1k/Giveaway-bot-vk/internal/lib/logger"
+	"github.com/Senpa1k/Giveaway-bot-vk/internal/maxapi"
 	"github.com/Senpa1k/Giveaway-bot-vk/internal/scheduler"
 	"github.com/Senpa1k/Giveaway-bot-vk/internal/service"
 	"github.com/Senpa1k/Giveaway-bot-vk/internal/storage"
 	"github.com/Senpa1k/Giveaway-bot-vk/internal/storage/postgres"
-	"github.com/Senpa1k/Giveaway-bot-vk/internal/vkapi"
 )
 
 func main() {
@@ -37,7 +37,7 @@ func run() error {
 
 	log.Info("starting giveaway bot",
 		slog.String("env", cfg.Env),
-		slog.String("mode", cfg.VK.Mode),
+		slog.String("mode", cfg.MAX.Mode),
 		slog.String("log_level", cfg.LogLevel),
 	)
 
@@ -52,7 +52,7 @@ func run() error {
 	defer pool.Close()
 
 	repo := storage.NewRepository(pool)
-	vk := vkapi.New(cfg.VK.Token, cfg.VK.APIVersion, cfg.VK.SendInterval)
+	client := maxapi.New(cfg.MAX.APIURL, cfg.MAX.AccessToken, cfg.MAX.SendInterval, log)
 
 	today := func() time.Time {
 		day, dayErr := cfg.Today(time.Now())
@@ -65,9 +65,8 @@ func run() error {
 
 	services := service.New(repo, service.Dependencies{
 		QueryTimeout: cfg.Database.QueryTimeout,
-		Sender:       vk,
-		Subscriber:   vk,
-		Banner:       cfg.Banner,
+		Sender:       client,
+		Subscriber:   client,
 		Campaign: service.CampaignView{
 			MainPrize:     cfg.Campaign.MainPrize,
 			MaxChances:    cfg.Campaign.MaxChances,
@@ -87,22 +86,23 @@ func run() error {
 	// The single event worker keeps the messages of a user ordered.
 	services.Start(ctx)
 
-	handleEvent := func(_ context.Context, event vkapi.Event) {
-		if event.Type != vkapi.EventMessageNew {
+	handleUpdate := func(ctx context.Context, update maxapi.Update) {
+		message, ok := maxapi.DecodeUpdate(update)
+		if !ok {
 			return
 		}
-		message, msgErr := event.Message()
-		if msgErr != nil {
-			log.Error("decode message event failed", logger.Err(msgErr))
-			return
+		if message.CallbackID != "" {
+			if answerErr := client.AnswerCallback(ctx, message.CallbackID); answerErr != nil {
+				log.Warn("answer callback failed", logger.Err(answerErr), slog.Int64("max_id", message.UserID))
+			}
 		}
 		services.Enqueue(message)
 	}
 
-	if cfg.VK.Mode == config.ModeLongPoll {
-		longPoll := vkapi.NewLongPoll(vk, cfg.VK.GroupID, cfg.VK.LongPollWait, log)
+	if cfg.MAX.Mode == config.ModeLongPoll {
+		longPoll := maxapi.NewLongPoll(client, cfg.MAX.LongPollWait, log)
 		go func() {
-			if runErr := longPoll.Run(ctx, handleEvent); runErr != nil && ctx.Err() == nil {
+			if runErr := longPoll.Run(ctx, handleUpdate); runErr != nil && ctx.Err() == nil {
 				log.Error("long poll stopped", logger.Err(runErr))
 			}
 		}()
@@ -130,7 +130,7 @@ func run() error {
 
 	server := &http.Server{
 		Addr:              cfg.HTTPServer.Address,
-		Handler:           handlers.NewServer(log, services, cfg.VK.Confirmation, cfg.VK.Secret, cfg.Admin.Token, today).Routes(),
+		Handler:           handlers.NewServer(log, services, client, cfg.Admin.Token, today).Routes(),
 		ReadHeaderTimeout: cfg.HTTPServer.ReadHeaderTimeout,
 		ReadTimeout:       cfg.HTTPServer.ReadTimeout,
 		WriteTimeout:      cfg.HTTPServer.WriteTimeout,

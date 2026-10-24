@@ -22,7 +22,7 @@ func newChancesService(maxChances int) (*ChancesService, *fakeChancesRepo) {
 // The chance total is capped: an active day after the cap changes nothing.
 func TestChancesCappedAtMax(t *testing.T) {
 	service, repo := newChancesService(3)
-	user := model.User{ID: newUserID(), VKID: 1}
+	user := model.User{ID: newUserID(), MaxID: 1}
 
 	for day := 1; day <= 5; day++ {
 		today := time.Date(2026, 11, day, 12, 0, 0, 0, time.UTC)
@@ -41,7 +41,7 @@ func TestChancesCappedAtMax(t *testing.T) {
 
 func TestMyChancesScreen(t *testing.T) {
 	service, _ := newChancesService(10)
-	user := model.User{ID: newUserID(), VKID: 1}
+	user := model.User{ID: newUserID(), MaxID: 1}
 
 	// Two active days out of ten.
 	for _, day := range []int{1, 2} {

@@ -3,23 +3,22 @@ package service
 import (
 	"context"
 
-	"github.com/Senpa1k/Giveaway-bot-vk/internal/vkapi"
+	"github.com/Senpa1k/Giveaway-bot-vk/internal/maxapi"
 )
 
-// Sender delivers bot messages to VK users.
+// Sender delivers bot messages to MAX users.
 type Sender interface {
-	MessagesSend(ctx context.Context, peerID int64, text string, keyboard *vkapi.Keyboard, attachment string) error
+	SendMessage(ctx context.Context, userID int64, text string, keyboard *maxapi.Keyboard) error
 }
 
-// Subscriber checks VK community subscriptions.
+// Subscriber checks MAX channel subscriptions.
 type Subscriber interface {
-	IsMember(ctx context.Context, groupID, userID int64) (bool, error)
+	IsMember(ctx context.Context, chatID, userID int64) (bool, error)
 }
 
 // Reply is a bot message waiting to be sent. A nil Keyboard sends a plain
-// message; an empty Attachment sends no banner.
+// message.
 type Reply struct {
-	Text       string
-	Keyboard   *vkapi.Keyboard
-	Attachment string
+	Text     string
+	Keyboard *maxapi.Keyboard
 }

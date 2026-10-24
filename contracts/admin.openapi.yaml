@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  title: Giveaway-bot-vk admin API
+  title: Giveaway-bot admin API (MAX)
   version: 1.0.0
   description: |
     Админ-API бота розыгрышей: управление партнерами и промокодами,
@@ -29,12 +29,12 @@ components:
     PartnerRequest:
       type: object
       additionalProperties: false
-      required: [name, day, vk_group_id, vk_url, prize_name]
+      required: [name, day, max_channel_id, max_url, prize_name]
       properties:
         name: { type: string, maxLength: 100 }
         day: { type: string, format: date, description: день партнера }
-        vk_group_id: { type: integer, format: int64, minimum: 1 }
-        vk_url: { type: string, description: ссылка кнопки «Подписаться» }
+        max_channel_id: { type: integer, format: int64, minimum: 1, description: ID канала MAX партнера }
+        max_url: { type: string, description: ссылка кнопки «Подписаться» }
         promo_valid_until: { type: string, format: date, nullable: true }
         promo_where: { type: string, description: где применять промокод }
         prize_name: { type: string, maxLength: 300 }
@@ -46,8 +46,8 @@ components:
         id: { type: string, format: uuid }
         name: { type: string }
         day: { type: string, format: date }
-        vk_group_id: { type: integer, format: int64 }
-        vk_url: { type: string }
+        max_channel_id: { type: integer, format: int64 }
+        max_url: { type: string }
         promo_valid_until: { type: string, format: date, nullable: true }
         promo_where: { type: string }
         prize_name: { type: string }
@@ -90,7 +90,7 @@ components:
         prize: { type: string }
         tickets: { type: integer }
         user_id: { type: string, format: uuid }
-        vk_id: { type: integer, format: int64 }
+        max_id: { type: integer, format: int64 }
         contact_name: { type: string }
         consent_given: { type: boolean }
         notified_at: { type: string, format: date-time, nullable: true }
@@ -98,7 +98,7 @@ components:
       type: object
       properties:
         user_id: { type: string, format: uuid }
-        vk_id: { type: integer, format: int64 }
+        max_id: { type: integer, format: int64 }
         registered_at: { type: string, format: date-time }
     DrawDetail:
       type: object
@@ -162,7 +162,7 @@ components:
       properties:
         missed_winner_id: { type: string, format: uuid }
         promoted_winner_id: { type: string, format: uuid, nullable: true }
-        promoted_vk_id: { type: integer, format: int64, nullable: true }
+        promoted_max_id: { type: integer, format: int64, nullable: true }
 
 security:
   - bearerAuth: []

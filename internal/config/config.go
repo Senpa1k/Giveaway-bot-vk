@@ -6,16 +6,17 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
-// Режимы получения событий VK: long poll для локальной разработки и
-// Callback API для продакшена с публичным HTTPS-адресом.
+// Режимы получения событий MAX: long polling для локальной разработки и
+// вебхуки для продакшена с публичным HTTPS-адресом.
 const (
 	ModeLongPoll = "longpoll"
-	ModeCallback = "callback"
+	ModeWebhook  = "webhook"
 )
 
 // Config holds bot settings.
@@ -23,10 +24,9 @@ type Config struct {
 	Env             string        `yaml:"env" env:"ENV" env-default:"local"`
 	LogLevel        string        `yaml:"log_level" env:"LOG_LEVEL" env-default:"info"`
 	ShutdownTimeout time.Duration `yaml:"shutdown_timeout" env:"SHUTDOWN_TIMEOUT" env-default:"10s"`
-	Banner          string        `yaml:"banner" env:"BANNER" env-default:""`
 	HTTPServer      HTTPServer    `yaml:"http-server"`
 	Database        Database      `yaml:"database"`
-	VK              VK            `yaml:"vk"`
+	MAX             MAX           `yaml:"max"`
 	Campaign        Campaign      `yaml:"campaign"`
 	Draw            Draw          `yaml:"draw"`
 	Admin           Admin         `yaml:"admin"`
@@ -51,16 +51,13 @@ type Database struct {
 	QueryTimeout    time.Duration `yaml:"query_timeout" env:"DATABASE_QUERY_TIMEOUT" env-default:"3s"`
 }
 
-// VK holds VK API and event settings.
-type VK struct {
-	Mode         string        `yaml:"mode" env:"VK_MODE" env-default:"longpoll"`
-	GroupID      int64         `yaml:"group_id" env:"VK_GROUP_ID" env-default:"0"`
-	Token        string        `yaml:"token" env:"VK_TOKEN" env-required:"true"`
-	APIVersion   string        `yaml:"api_version" env:"VK_API_VERSION" env-default:"5.199"`
-	Confirmation string        `yaml:"confirmation" env:"VK_CONFIRMATION" env-default:""`
-	Secret       string        `yaml:"secret" env:"VK_SECRET" env-default:""`
-	LongPollWait time.Duration `yaml:"longpoll_wait" env:"VK_LONGPOLL_WAIT" env-default:"25s"`
-	SendInterval time.Duration `yaml:"send_interval" env:"VK_SEND_INTERVAL" env-default:"60ms"`
+// MAX holds MAX Bot API and event settings.
+type MAX struct {
+	Mode         string        `yaml:"mode" env:"MAX_MODE" env-default:"longpoll"`
+	APIURL       string        `yaml:"api_url" env:"MAX_API_URL" env-default:"https://platform-api2.max.ru"`
+	AccessToken  string        `yaml:"access_token" env:"MAX_ACCESS_TOKEN" env-required:"true"`
+	LongPollWait time.Duration `yaml:"longpoll_wait" env:"MAX_LONGPOLL_WAIT" env-default:"25s"`
+	SendInterval time.Duration `yaml:"send_interval" env:"MAX_SEND_INTERVAL" env-default:"600ms"`
 }
 
 // Campaign holds the action timeline and prize settings.
@@ -117,16 +114,13 @@ func MustLoad() *Config {
 func (c *Config) validate() error {
 	var errs []error
 
-	switch c.VK.Mode {
-	case ModeLongPoll, ModeCallback:
+	switch c.MAX.Mode {
+	case ModeLongPoll, ModeWebhook:
 	default:
-		errs = append(errs, fmt.Errorf("vk.mode must be %q or %q", ModeLongPoll, ModeCallback))
+		errs = append(errs, fmt.Errorf("max.mode must be %q or %q", ModeLongPoll, ModeWebhook))
 	}
-	if c.VK.Mode == ModeLongPoll && c.VK.GroupID <= 0 {
-		errs = append(errs, errors.New("vk.group_id must be set in longpoll mode"))
-	}
-	if c.VK.Mode == ModeCallback && c.VK.Confirmation == "" {
-		errs = append(errs, errors.New("vk.confirmation must be set in callback mode"))
+	if strings.TrimSpace(c.MAX.APIURL) == "" {
+		errs = append(errs, errors.New("max.api_url must not be empty"))
 	}
 
 	if _, _, err := c.Campaign.Span(); err != nil {

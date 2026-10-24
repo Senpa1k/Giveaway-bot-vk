@@ -29,15 +29,15 @@ func NewUserRepository(pool *pgxpool.Pool) *UserRepository {
 	return &UserRepository{pool: pool}
 }
 
-// UpsertByVKID registers the first message of a VK user and returns the user.
+// UpsertByMaxID registers the first message of a MAX user and returns the user.
 // The conflict update only refreshes updated_at, so concurrent first messages
 // converge on a single row.
-func (r *UserRepository) UpsertByVKID(ctx context.Context, vkID int64) (*model.User, error) {
+func (r *UserRepository) UpsertByMaxID(ctx context.Context, maxID int64) (*model.User, error) {
 	row := r.pool.QueryRow(ctx, `
-		INSERT INTO users (vk_id) VALUES ($1)
-		ON CONFLICT (vk_id) DO UPDATE SET updated_at = now()
-		RETURNING id, vk_id, first_name, last_name, state, state_ctx, created_at, updated_at`,
-		vkID,
+		INSERT INTO users (max_id) VALUES ($1)
+		ON CONFLICT (max_id) DO UPDATE SET updated_at = now()
+		RETURNING id, max_id, first_name, last_name, state, state_ctx, created_at, updated_at`,
+		maxID,
 	)
 	return scanUser(row)
 }
@@ -45,7 +45,7 @@ func (r *UserRepository) UpsertByVKID(ctx context.Context, vkID int64) (*model.U
 // ByID returns the user or model.ErrUserNotFound.
 func (r *UserRepository) ByID(ctx context.Context, id uuid.UUID) (*model.User, error) {
 	row := r.pool.QueryRow(ctx, `
-		SELECT id, vk_id, first_name, last_name, state, state_ctx, created_at, updated_at
+		SELECT id, max_id, first_name, last_name, state, state_ctx, created_at, updated_at
 		FROM users WHERE id = $1`, id)
 	return scanUser(row)
 }
@@ -58,7 +58,7 @@ func (r *UserRepository) ByIDs(ctx context.Context, ids []uuid.UUID) (map[uuid.U
 	}
 
 	query, args, err := statementBuilder().
-		Select("id", "vk_id", "first_name", "last_name", "state", "state_ctx", "created_at", "updated_at").
+		Select("id", "max_id", "first_name", "last_name", "state", "state_ctx", "created_at", "updated_at").
 		From("users").
 		Where(sq.Eq{"id": ids}).
 		ToSql()
@@ -98,24 +98,24 @@ func (r *UserRepository) SetState(ctx context.Context, id uuid.UUID, state model
 	return nil
 }
 
-// AllVKIDs lists VK ids of every user for broadcasts.
-func (r *UserRepository) AllVKIDs(ctx context.Context) ([]int64, error) {
-	rows, err := r.pool.Query(ctx, `SELECT vk_id FROM users ORDER BY created_at`)
+// AllMaxIDs lists MAX ids of every user for broadcasts.
+func (r *UserRepository) AllMaxIDs(ctx context.Context) ([]int64, error) {
+	rows, err := r.pool.Query(ctx, `SELECT max_id FROM users ORDER BY created_at`)
 	if err != nil {
-		return nil, fmt.Errorf("select user vk ids: %w", err)
+		return nil, fmt.Errorf("select user max ids: %w", err)
 	}
 	defer rows.Close()
 
 	ids := make([]int64, 0)
 	for rows.Next() {
-		var vkID int64
-		if err := rows.Scan(&vkID); err != nil {
-			return nil, fmt.Errorf("scan user vk id: %w", err)
+		var maxID int64
+		if err := rows.Scan(&maxID); err != nil {
+			return nil, fmt.Errorf("scan user max id: %w", err)
 		}
-		ids = append(ids, vkID)
+		ids = append(ids, maxID)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("read user vk ids: %w", err)
+		return nil, fmt.Errorf("read user max ids: %w", err)
 	}
 	return ids, nil
 }
@@ -127,7 +127,7 @@ func scanUser(row pgx.Row) (*model.User, error) {
 	var stateCtx []byte
 	if err := row.Scan(
 		&user.ID,
-		&user.VKID,
+		&user.MaxID,
 		&user.FirstName,
 		&user.LastName,
 		&state,
