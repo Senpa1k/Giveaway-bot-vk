@@ -7,6 +7,7 @@ import (
 )
 
 // Sources of a day chance: a received promocode or a draw registration.
+// Sources of a day chance.
 const (
 	ChanceSourcePromo = "promo"
 	ChanceSourceDraw  = "draw"

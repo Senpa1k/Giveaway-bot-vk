@@ -3,7 +3,6 @@ package service
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/Senpa1k/Giveaway-bot-vk/internal/model"
 	"github.com/Senpa1k/Giveaway-bot-vk/internal/vkapi"
@@ -239,9 +238,4 @@ func claimPrompt(name string) *Reply {
 			TextRow("Согласен, передать данные", CmdConsentYes, vkapi.ColorPositive).
 			TextRow("Отказаться", CmdConsentNo, vkapi.ColorNegative),
 	}
-}
-
-// russianDate formats a date for winner messages.
-func russianDate(day time.Time) string {
-	return day.Format("02.01.2006")
 }

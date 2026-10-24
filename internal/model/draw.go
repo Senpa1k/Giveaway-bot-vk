@@ -9,6 +9,7 @@ import (
 // DrawKind separates daily partner draws from the final draw.
 type DrawKind string
 
+// Kinds of draws: the daily partner draws and the final of the campaign.
 const (
 	DrawKindDaily DrawKind = "daily"
 	DrawKindFinal DrawKind = "final"
@@ -19,6 +20,7 @@ const (
 // notified once winners received their messages.
 type DrawStatus string
 
+// Statuses of the draw lifecycle in their only allowed order.
 const (
 	DrawStatusPending  DrawStatus = "pending"
 	DrawStatusDrawn    DrawStatus = "drawn"
@@ -53,6 +55,7 @@ type DrawEntry struct {
 // WinnerKind separates prize winners from reserve winners.
 type WinnerKind string
 
+// Kinds of winners: prize winners and reserves waiting for a transfer.
 const (
 	WinnerKindWinner  WinnerKind = "winner"
 	WinnerKindReserve WinnerKind = "reserve"
@@ -63,6 +66,7 @@ const (
 // contact data is saved. Missed and reassigned close a prize without issue.
 type WinnerStatus string
 
+// Statuses of the prize delivery process.
 const (
 	WinnerStatusAwaitingResponse WinnerStatus = "awaiting_response"
 	WinnerStatusContacted        WinnerStatus = "contacted"

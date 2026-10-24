@@ -13,7 +13,7 @@ import (
 const maxAdminBodyBytes = 1 << 20
 
 // writeJSON sends one JSON response.
-func writeJSON(w http.ResponseWriter, r *http.Request, status int, body any) {
+func writeJSON(w http.ResponseWriter, _ *http.Request, status int, body any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(body); err != nil {

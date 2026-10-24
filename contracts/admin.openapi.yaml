@@ -1,0 +1,366 @@
+openapi: 3.1.0
+info:
+  title: Giveaway-bot-vk admin API
+  version: 1.0.0
+  description: |
+    Админ-API бота розыгрышей: управление партнерами и промокодами,
+    проведение и подтверждение розыгрышей, выгрузки для команды MAX и
+    партнера, статистика и рассылки. Реализован вручную на chi
+    (internal/http-server/handlers); этот файл — источник истины контракта.
+
+servers:
+  - url: http://localhost:8080
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    Problem:
+      type: object
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        code: { type: string }
+        detail: { type: string }
+        instance: { type: string }
+    PartnerRequest:
+      type: object
+      additionalProperties: false
+      required: [name, day, vk_group_id, vk_url, prize_name]
+      properties:
+        name: { type: string, maxLength: 100 }
+        day: { type: string, format: date, description: день партнера }
+        vk_group_id: { type: integer, format: int64, minimum: 1 }
+        vk_url: { type: string, description: ссылка кнопки «Подписаться» }
+        promo_valid_until: { type: string, format: date, nullable: true }
+        promo_where: { type: string, description: где применять промокод }
+        prize_name: { type: string, maxLength: 300 }
+        prize_instruction: { type: string, maxLength: 1000, description: инструкция победителю }
+        winners_count: { type: integer, minimum: 1, default: 1 }
+    Partner:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        day: { type: string, format: date }
+        vk_group_id: { type: integer, format: int64 }
+        vk_url: { type: string }
+        promo_valid_until: { type: string, format: date, nullable: true }
+        promo_where: { type: string }
+        prize_name: { type: string }
+        prize_instruction: { type: string }
+        winners_count: { type: integer }
+        created_at: { type: string, format: date-time }
+    DrawRunRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        day: { type: string, format: date, description: по умолчанию сегодняшний }
+    ApproveRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        approved_by: { type: string, description: кто подтвердил результаты }
+    Draw:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        kind: { type: string, enum: [daily, final] }
+        day: { type: string, format: date }
+        partner_id: { type: string, format: uuid, nullable: true }
+        partner_name: { type: string }
+        status: { type: string, enum: [pending, drawn, approved, notified] }
+        winners_count: { type: integer }
+        reserve_count: { type: integer }
+        participants: { type: integer }
+        drawn_at: { type: string, format: date-time, nullable: true }
+        approved_at: { type: string, format: date-time, nullable: true }
+        approved_by: { type: string }
+        notified_at: { type: string, format: date-time, nullable: true }
+    Winner:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        position: { type: integer }
+        kind: { type: string, enum: [winner, reserve] }
+        status: { type: string, enum: [awaiting_response, contacted, confirmed, missed, reassigned] }
+        prize: { type: string }
+        tickets: { type: integer }
+        user_id: { type: string, format: uuid }
+        vk_id: { type: integer, format: int64 }
+        contact_name: { type: string }
+        consent_given: { type: boolean }
+        notified_at: { type: string, format: date-time, nullable: true }
+    Participant:
+      type: object
+      properties:
+        user_id: { type: string, format: uuid }
+        vk_id: { type: integer, format: int64 }
+        registered_at: { type: string, format: date-time }
+    DrawDetail:
+      type: object
+      properties:
+        draw: { $ref: '#/components/schemas/Draw' }
+        winners:
+          type: array
+          items: { $ref: '#/components/schemas/Winner' }
+        participants:
+          type: array
+          items: { $ref: '#/components/schemas/Participant' }
+    Stats:
+      type: object
+      properties:
+        total_users: { type: integer }
+        new_users_by_day:
+          type: array
+          items:
+            type: object
+            properties:
+              day: { type: string, format: date }
+              count: { type: integer }
+        promo_requests_total: { type: integer }
+        promo_issued_total: { type: integer }
+        promo_by_partner:
+          type: array
+          items:
+            type: object
+            properties:
+              partner_id: { type: string, format: uuid }
+              name: { type: string }
+              day: { type: string, format: date }
+              requests: { type: integer }
+              total: { type: integer }
+              issued: { type: integer }
+              remaining: { type: integer }
+        draws:
+          type: array
+          items:
+            type: object
+            properties:
+              draw_id: { type: string, format: uuid }
+              kind: { type: string }
+              date: { type: string, format: date }
+              partner_name: { type: string }
+              status: { type: string }
+              participants: { type: integer }
+    BroadcastRequest:
+      type: object
+      additionalProperties: false
+      required: [text]
+      properties:
+        text: { type: string, maxLength: 4000 }
+    BroadcastResponse:
+      type: object
+      properties:
+        sent: { type: integer }
+        failed: { type: integer }
+    MissWinnerResponse:
+      type: object
+      properties:
+        missed_winner_id: { type: string, format: uuid }
+        promoted_winner_id: { type: string, format: uuid, nullable: true }
+        promoted_vk_id: { type: integer, format: int64, nullable: true }
+
+security:
+  - bearerAuth: []
+
+paths:
+  /api/admin/partners:
+    get:
+      summary: Список партнеров
+      responses:
+        "200":
+          description: Партнеры по дням акции
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Partner' }
+    post:
+      summary: Создать партнера дня
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PartnerRequest' }
+      responses:
+        "201":
+          description: Партнер создан
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Partner' }
+        "400":
+          description: Невалидный запрос
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        default:
+          description: Ошибка
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /api/admin/partners/{partnerID}/promocodes:
+    post:
+      summary: Загрузить пачку промокодов партнера
+      parameters:
+        - { name: partnerID, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [codes]
+              properties:
+                codes:
+                  type: array
+                  maxItems: 10000
+                  items: { type: string }
+      responses:
+        "200":
+          description: Сколько кодов добавлено (дубликаты пропущены)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  imported: { type: integer }
+        "404": { description: Партнер не найден }
+
+  /api/admin/draws:
+    get:
+      summary: Список розыгрышей с числом участников
+      responses:
+        "200":
+          description: Розыгрыши, новые сверху
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Draw' }
+
+  /api/admin/draws/daily:
+    post:
+      summary: Провести ежедневный розыгрыш
+      description: Случайный выбор победителей среди проверенных участников.
+        Уведомления не отправляются до подтверждения.
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DrawRunRequest' }
+      responses:
+        "200":
+          description: Результаты розыгрыша
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DrawDetail' }
+        "404": { description: В этот день нет партнера }
+        "409": { description: Нет регистраций или розыгрыш уже проведен }
+
+  /api/admin/draws/final:
+    post:
+      summary: Провести финальный розыгрыш
+      description: Каждый накопленный шанс — один билет; один пользователь
+        побеждает не более одного раза.
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DrawRunRequest' }
+      responses:
+        "200":
+          description: Победители и резервы
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DrawDetail' }
+        "409": { description: Нет шансов или розыгрыш уже проведен }
+
+  /api/admin/draws/{drawID}:
+    get:
+      summary: Розыгрыш с победителями и участниками
+      parameters:
+        - { name: drawID, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Детали розыгрыша
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DrawDetail' }
+        "404": { description: Розыгрыш не найден }
+
+  /api/admin/draws/{drawID}/export:
+    get:
+      summary: Выгрузка CSV для команды MAX и партнера
+      parameters:
+        - { name: drawID, in: path, required: true, schema: { type: string, format: uuid } }
+        - name: type
+          in: query
+          schema: { type: string, enum: [winners, participants], default: winners }
+      responses:
+        "200":
+          description: CSV-файл
+          content:
+            text/csv:
+              schema: { type: string }
+        "404": { description: Розыгрыш не найден }
+
+  /api/admin/draws/{drawID}/approve:
+    post:
+      summary: Подтвердить результаты и разослать уведомления победителям
+      parameters:
+        - { name: drawID, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ApproveRequest' }
+      responses:
+        "200":
+          description: Подтвержденный розыгрыш
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DrawDetail' }
+        "404": { description: Розыгрыш не найден }
+        "409": { description: Розыгрыш не в статусе drawn или уже обработан }
+
+  /api/admin/winners/{winnerID}/miss:
+    post:
+      summary: Победитель не ответил — передать приз резервному
+      parameters:
+        - { name: winnerID, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Результат передачи
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MissWinnerResponse' }
+        "404": { description: Победитель не найден }
+        "409": { description: Недопустимый статус победителя }
+
+  /api/admin/stats:
+    get:
+      summary: Статистика и аналитика
+      responses:
+        "200":
+          description: Снимок метрик ТЗ
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Stats' }
+
+  /api/admin/broadcast:
+    post:
+      summary: Пуш-уведомление всем пользователям
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BroadcastRequest' }
+      responses:
+        "200":
+          description: Счетчики доставки
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BroadcastResponse' }

@@ -131,7 +131,7 @@ func (c *Client) call(ctx context.Context, method string, params url.Values, dst
 	body := params.Encode()
 
 	var lastErr error
-	for attempt := 0; attempt < maxAttempts; attempt++ {
+	for attempt := range maxAttempts {
 		if attempt > 0 {
 			if err := sleep(ctx, rateLimitRetry); err != nil {
 				return err

@@ -126,9 +126,9 @@ func (s *WinnerService) NotifyDraw(ctx context.Context, drawID uuid.UUID) error 
 			s.log.Error("winner has no user row", slog.String("winner_id", winner.ID.String()))
 			continue
 		}
-		reply, err := s.winnerReply(queryCtx, draw, &winner)
-		if err != nil {
-			s.log.Error("build winner message failed", logger.Err(err), slog.String("winner_id", winner.ID.String()))
+		reply, buildErr := s.winnerReply(queryCtx, draw, &winner)
+		if buildErr != nil {
+			s.log.Error("build winner message failed", logger.Err(buildErr), slog.String("winner_id", winner.ID.String()))
 			continue
 		}
 		if err = s.sender.MessagesSend(ctx, user.VKID, reply.Text, reply.Keyboard, ""); err != nil {
@@ -180,7 +180,8 @@ func (s *WinnerService) StartClaim(ctx context.Context, user *model.User) (*Repl
 // asks for the data-transfer consent.
 func (s *WinnerService) SubmitName(ctx context.Context, user *model.User, name string) (*Reply, error) {
 	name = normalizeName(name)
-	if utf8.RuneCountInString(name) < 2 {
+	nameLen := utf8.RuneCountInString(name)
+	if nameLen < 2 || nameLen > maxContactNameLen {
 		return claimNameRetryReply(), nil
 	}
 
