@@ -5,6 +5,9 @@
 из проекта GorkyCode: слои `http-server/handlers` → `service` → `storage`,
 миграции goose, единый golangci-lint, Makefile.
 
+Живой пример — тестовое сообщество с ботом:
+[ vk.ru/club242585127 ](https://vk.ru/club242585127).
+
 ## Что умеет
 
 - **Запуск** — приветствие с баннером и главным меню: «Получить промокод»,
