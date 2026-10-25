@@ -1,0 +1,38 @@
+# Render Blueprint: веб-сервис бота + PostgreSQL.
+# Деплой: dashboard.render.com → New → Blueprint → выбрать этот репозиторий.
+# Секреты (sync: false) Render спросит при создании и хранит сам.
+services:
+  - type: web
+    name: giveaway-bot
+    runtime: docker
+    plan: free
+    healthcheckPath: /health
+    envVars:
+      # Строка подключения создаётся автоматически из базы ниже.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: giveaway-db
+          property: connectionString
+      - key: VK_MODE
+        value: callback
+      - key: HTTP_ADDR
+        value: ":8080"
+      # Секреты вводятся руками при первом деплое:
+      - key: VK_TOKEN
+        sync: false
+      - key: VK_GROUP_ID
+        sync: false
+      # Строка подтверждения из Callback API сообщества.
+      - key: VK_CONFIRMATION
+        sync: false
+      # Одинаковый секрет в Render и в настройках Callback API.
+      - key: VK_SECRET
+        sync: false
+      - key: ADMIN_TOKEN
+        sync: false
+
+databases:
+  - name: giveaway-db
+    plan: free
+    # Free-база Render живёт ограниченное время — для долгой работы
+    # переведи на Starter или используй внешнюю (Neon).
