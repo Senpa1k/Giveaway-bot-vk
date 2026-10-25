@@ -6,7 +6,6 @@ services:
     name: giveaway-bot
     runtime: docker
     plan: free
-    healthcheckPath: /health
     envVars:
       # Строка подключения создаётся автоматически из базы ниже.
       - key: DATABASE_URL
