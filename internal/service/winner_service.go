@@ -323,7 +323,7 @@ func normalizeName(name string) string {
 
 func noClaimReply() *Reply {
 	return &Reply{
-		Text:     "Приза за тобой пока не числится 🤔\n\nНо розыгрыши идут каждый день — не пропускай!",
+		Text:     "Приза за тобой пока не числится 🤔\n\nНо розыгрыши идут каждый день - не пропускай!",
 		Keyboard: mainMenu(),
 	}
 }
@@ -342,14 +342,14 @@ func claimNameRetryReply() *Reply {
 
 func claimDoneReply() *Reply {
 	return &Reply{
-		Text:     "Готово! ✅\n\nМы передадим твои данные для получения приза — организатор свяжется с тобой.",
+		Text:     "Готово! ✅\n\nМы передадим твои данные для получения приза - организатор свяжется с тобой.",
 		Keyboard: mainMenu(),
 	}
 }
 
 func claimRefusedReply() *Reply {
 	return &Reply{
-		Text:     "Хорошо! Если передумаешь — нажми «Получить приз» еще раз.",
+		Text:     "Хорошо! Если передумаешь - нажми «Получить приз» еще раз.",
 		Keyboard: mainMenu(),
 	}
 }

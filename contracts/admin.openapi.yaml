@@ -6,7 +6,7 @@ info:
     Админ-API бота розыгрышей: управление партнерами и промокодами,
     проведение и подтверждение розыгрышей, выгрузки для команды MAX и
     партнера, статистика и рассылки. Реализован вручную на chi
-    (internal/http-server/handlers); этот файл — источник истины контракта.
+    (internal/http-server/handlers); этот файл - источник истины контракта.
 
 servers:
   - url: http://localhost:8080
@@ -265,7 +265,7 @@ paths:
   /api/admin/draws/final:
     post:
       summary: Провести финальный розыгрыш
-      description: Каждый накопленный шанс — один билет; один пользователь
+      description: Каждый накопленный шанс - один билет; один пользователь
         побеждает не более одного раза.
       requestBody:
         content:
@@ -328,7 +328,7 @@ paths:
 
   /api/admin/winners/{winnerID}/miss:
     post:
-      summary: Победитель не ответил — передать приз резервному
+      summary: Победитель не ответил - передать приз резервному
       parameters:
         - { name: winnerID, in: path, required: true, schema: { type: string, format: uuid } }
       responses:

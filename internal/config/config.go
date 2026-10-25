@@ -193,7 +193,7 @@ func (d Draw) Location() (*time.Location, error) {
 }
 
 // Today returns the current calendar day in the draw time zone. All day
-// comparisons — partner days, chances, draw dates — use this value.
+// comparisons - partner days, chances, draw dates - use this value.
 func (c *Config) Today(now time.Time) (time.Time, error) {
 	loc, err := c.Draw.Location()
 	if err != nil {

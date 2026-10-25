@@ -12,12 +12,12 @@ import (
 	"github.com/fatih/color"
 )
 
-// PrettyHandlerOptions — настройки PrettyHandler.
+// PrettyHandlerOptions - настройки PrettyHandler.
 type PrettyHandlerOptions struct {
 	SlogOpts *slog.HandlerOptions
 }
 
-// PrettyHandler — slog.Handler, который пишет цветной человекочитаемый вывод.
+// PrettyHandler - slog.Handler, который пишет цветной человекочитаемый вывод.
 type PrettyHandler struct {
 	slog.Handler
 	l      *stdLog.Logger

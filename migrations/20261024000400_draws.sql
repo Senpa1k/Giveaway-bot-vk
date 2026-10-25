@@ -47,7 +47,7 @@ CREATE TABLE winners (
     -- Билетов на победителя: 2 в финальном розыгрыше по ТЗ.
     tickets        INT NOT NULL DEFAULT 1,
     -- awaiting_response -> contacted -> confirmed;
-    -- missed и reassigned — приз не получен вовремя.
+    -- missed и reassigned - приз не получен вовремя.
     status         TEXT NOT NULL DEFAULT 'awaiting_response'
                    CHECK (status IN ('awaiting_response', 'contacted', 'confirmed', 'missed', 'reassigned')),
     contact_name   TEXT NOT NULL DEFAULT '',

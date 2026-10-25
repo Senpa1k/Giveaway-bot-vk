@@ -1,7 +1,7 @@
 env: local
 log_level: info
 shutdown_timeout: 10s
-# Баннер приветствия как вложение VK, например photo-123_456; пусто — без баннера.
+# Баннер приветствия как вложение VK, например photo-123_456; пусто - без баннера.
 banner: ""
 
 http-server:
@@ -20,7 +20,7 @@ database:
   # url задается переменной окружения DATABASE_URL.
 
 vk:
-  # longpoll — локальная разработка без публичного адреса, callback — продакшен.
+  # longpoll - локальная разработка без публичного адреса, callback - продакшен.
   mode: longpoll
   group_id: 0
   # token задается переменной окружения VK_TOKEN.

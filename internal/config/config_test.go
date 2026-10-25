@@ -90,7 +90,7 @@ func TestRemainingDays(t *testing.T) {
 func TestTodayUsesDrawTimezone(t *testing.T) {
 	cfg := validConfig()
 
-	// 23:30 31 октября в Лондоне — уже 1 ноября в Москве.
+	// 23:30 31 октября в Лондоне - уже 1 ноября в Москве.
 	london := time.Date(2026, 10, 31, 23, 30, 0, 0, time.UTC)
 	today, err := cfg.Today(london)
 	if err != nil {

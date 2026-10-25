@@ -33,5 +33,5 @@ services:
 databases:
   - name: giveaway-db
     plan: free
-    # Free-база Render живёт ограниченное время — для долгой работы
+    # Free-база Render живёт ограниченное время - для долгой работы
     # переведи на Starter или используй внешнюю (Neon).

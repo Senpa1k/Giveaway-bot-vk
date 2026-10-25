@@ -30,8 +30,8 @@ func (s *Server) callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// The confirmation string is not a secret — VK shows it in the community
-	// settings — and the first confirmation arrives before the secret is
+	// The confirmation string is not a secret - VK shows it in the community
+	// settings - and the first confirmation arrives before the secret is
 	// saved in the community. Confirm first, then verify real events.
 	if event.Type == vkapi.EventConfirmation {
 		writePlain(w, s.confirmation)
